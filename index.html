@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Byggappen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Hero Landing -->
+  <section id="hero-landing" class="hero-landing">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-titel">Byggappen</h1>
+      <p class="hero-tagline">Från idé till verklighet — ditt nästa byggprojekt börjar här</p>
+      <div class="sok-wrapper">
+        <div class="sok-falt-container" id="sok-container">
+          <span class="sok-ikon">🔍</span>
+          <input
+            type="text"
+            id="sok-input"
+            class="sok-input"
+            placeholder="Sök konstruktion, t.ex. altan, pergola, lekstuga..."
+            autocomplete="off"
+            oninput="sokProjekt(this.value)"
+            onkeydown="sokTangent(event)"
+            onfocus="sokProjekt(this.value)"
+          />
+          <button class="sok-rensa" id="sok-rensa" onclick="rensaSok()" style="display:none">✕</button>
+        </div>
+        <ul class="sok-dropdown dold" id="sok-dropdown" role="listbox"></ul>
+      </div>
+    </div>
+    <div class="hero-scroll-indicator" onclick="document.getElementById('projekt-lista').scrollIntoView({behavior:'smooth'})">
+      <span class="scroll-chevron"></span>
+    </div>
+  </section>
+
+  <header>
+    <div class="header-topp">
+      <div class="header-text" onclick="gaaTillbaka()" style="cursor:pointer">
+        <h1>Byggappen</h1>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── Startsida: projektkort ── -->
+    <section class="projekt-lista" id="projekt-lista">
+      <h2 class="sektion-rubrik">Utforska projekt</h2>
+      <div class="kort-grid" id="kort-grid"></div>
+    </section>
+
+    <!-- ── Projektvy ── -->
+    <section id="projekt-innehall" class="dold">
+
+      <button class="tillbaka-knapp" onclick="gaaTillbaka()">← Alla projekt</button>
+
+      <!-- Hero -->
+      <div class="projekt-hero">
+        <div class="hero-vanster">
+          <span id="pv-ikon" class="hero-ikon"></span>
+          <div class="hero-text">
+            <h1 id="pv-namn"></h1>
+            <p id="pv-beskrivning"></p>
+            <div class="hero-badges" id="pv-badges"></div>
+          </div>
+        </div>
+        <div class="hero-kostnad">
+          <div class="kostnad-etikett">Uppskattad materialkostnad</div>
+          <div class="kostnad-varde" id="pv-kostnad">— kr</div>
+          <div class="kostnad-not">exkl. verktyg och arbete</div>
+        </div>
+      </div>
+
+      <!-- Bilduppladdning (steg 2) -->
+      <div id="pv-upload-sektion" class="upload-sektion dold">
+        <div class="upload-innehall">
+          <h2>Se hur det kan se ut hemma hos dig</h2>
+          <p class="upload-beskrivning">Ladda upp en bild på din tomt så skapar vi en realistisk visualisering av ditt projekt i din trädgård.</p>
+
+          <div class="upload-yta" id="upload-dropzone">
+            <div class="upload-ikon">📷</div>
+            <p class="upload-ledtext">Dra och släpp en bild här</p>
+            <p class="upload-eller">eller</p>
+            <label class="upload-knapp" for="upload-input">Välj bild</label>
+            <input type="file" id="upload-input" accept="image/*" style="display:none" />
+            <p class="upload-format">JPG, PNG — max 10 MB</p>
+          </div>
+
+          <div class="upload-forhandsvisning dold" id="upload-preview">
+            <img id="upload-bild" alt="Uppladdad bild" />
+            <button class="upload-byt" onclick="bytUploadBild()">Byt bild</button>
+          </div>
+
+          <div class="upload-knappar">
+            <button class="upload-fortsatt" id="upload-fortsatt" onclick="gaVidare()" disabled>Fortsätt med denna bild</button>
+            <button class="upload-hoppa" onclick="hoppaOverUpload()">Hoppa över</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vy-flikar -->
+      <div id="pv-vy-tabs" class="vy-tabs dold">
+        <button class="vy-tab aktiv-vy" id="vy-ai" onclick="bytVy('ai')">✨ AI-visualisering</button>
+        <button class="vy-tab" id="vy-3d" onclick="bytVy('3d')">📐 3D-modell</button>
+        <button class="vy-tab" id="vy-ritning" onclick="bytVy('ritning')">📋 Ritningar</button>
+      </div>
+
+      <!-- AI-visualisering -->
+      <div id="pv-ai-sektion" class="ai-sektion dold">
+        <div class="ai-innehall">
+          <div class="ai-bild-container" id="ai-bild-container">
+            <div class="ai-placeholder">
+              <span class="ai-placeholder-ikon">✨</span>
+              <p>Din AI-visualisering visas här</p>
+            </div>
+          </div>
+          <div class="ai-kontroller" id="ai-kontroller">
+            <p class="ai-kostnad-info" id="ai-kostnad-info"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dimensioner + förhandsgranskning (byggs dynamiskt av byggSliders) -->
+      <div id="pv-dim-sektion" class="dold">
+        <div id="pv-dim-layout" class="pv-dim-layout"></div>
+      </div>
+
+      <!-- 3D Detaljritning -->
+      <div id="ritvy-sektion" class="dold">
+        <div class="ritvy-header">
+          <div class="stil-knappar">
+            <button class="stil-knapp aktiv-stil" id="stil-teknisk"     onclick="bytRitvyStyle('teknisk')">Teknisk 3D</button>
+            <button class="stil-knapp"             id="stil-realistisk" onclick="bytRitvyStyle('realistisk')">Realistisk 3D</button>
+            <button class="stil-knapp"             id="stil-plan"       onclick="bytRitvyStyle('plan')">Planritning (utskrift)</button>
+          </div>
+          <button class="aterst-knapp" onclick="aterStallVy()" title="Återställ kameravinkel">↺ Återställ</button>
+          <button class="aterst-knapp" onclick="oppnaRitvy()" title="Stäng ritning">✕ Stäng</button>
+        </div>
+        <div class="lager-panel" id="lager-panel"></div>
+        <div class="ritvy-canvas">
+          <canvas id="ritvy-gl" width="600" height="420"></canvas>
+          <svg id="ritvy-overlay" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+          <svg id="ritvy-svg" class="dold" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div id="ritvy-kontroller" class="ritvy-kontroller"></div>
+      </div>
+
+      <!-- Flikar -->
+      <div class="flikar">
+        <button class="flik aktiv-flik" onclick="byttFlik('instruktioner')">Instruktioner</button>
+        <button class="flik" onclick="byttFlik('inkopslista')">Inköpslista</button>
+        <button class="flik" onclick="byttFlik('verktyg')">Verktyg</button>
+      </div>
+      <div id="instruktioner" class="flik-innehall"></div>
+      <div id="inkopslista" class="flik-innehall dold"></div>
+      <div id="verktyg" class="flik-innehall dold"></div>
+
+    </section>
+  </main>
+
+  <script src="projekt-data.js"></script>
+  <script src="render3d.js"></script>
+  <script src="design-modell.js"></script>
+  <script src="bygg3d.js"></script>
+  <script src="generator.js"></script>
+  <script src="editor.js"></script>
+  <script src="ai-visualisering.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

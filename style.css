@@ -1,0 +1,1990 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  background: #f4f1ec;
+  color: #2c2c2c;
+}
+
+/* --- Hero Landing --- */
+.hero-landing {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: url('assets/hero-bg.jpg') center/cover no-repeat;
+  background-color: #1a3a24;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 680px;
+  padding: 0 24px;
+}
+
+.hero-titel {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 3.5rem;
+  color: white;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+
+.hero-tagline {
+  font-size: 1.2rem;
+  color: rgba(255,255,255,0.88);
+  margin-bottom: 36px;
+  line-height: 1.5;
+}
+
+.hero-content .sok-wrapper {
+  max-width: 100%;
+}
+
+.hero-content .sok-falt-container {
+  padding: 0 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+.hero-content .sok-input {
+  font-size: 1.15rem;
+  padding: 18px 0;
+}
+
+.hero-content .sok-ikon {
+  font-size: 1.3rem;
+}
+
+.hero-content .sok-dropdown {
+  border-radius: 14px;
+}
+
+/* Scroll-indikator */
+.hero-scroll-indicator {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  cursor: pointer;
+}
+
+.scroll-chevron {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-right: 3px solid rgba(255,255,255,0.7);
+  border-bottom: 3px solid rgba(255,255,255,0.7);
+  transform: rotate(45deg);
+  animation: bounceDown 2s ease-in-out infinite;
+}
+
+@keyframes bounceDown {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.7; }
+  50%      { transform: rotate(45deg) translate(6px, 6px); opacity: 1; }
+}
+
+/* --- Header (sticky) --- */
+header {
+  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  color: white;
+  padding: 12px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: box-shadow 0.3s;
+}
+
+header.scrolled {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+}
+
+.header-topp {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.header-text h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.4rem;
+  margin-bottom: 0;
+}
+
+/* --- Sökfält --- */
+.sok-wrapper {
+  position: relative;
+  max-width: 580px;
+}
+
+.sok-falt-container {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 10px;
+  padding: 0 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  transition: box-shadow 0.2s;
+}
+
+.sok-falt-container:focus-within {
+  box-shadow: 0 3px 18px rgba(0,0,0,0.3);
+}
+
+.sok-ikon {
+  font-size: 1.1rem;
+  margin-right: 10px;
+  opacity: 0.5;
+  user-select: none;
+}
+
+.sok-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 13px 0;
+  background: transparent;
+  color: #2c2c2c;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+.sok-input::placeholder {
+  color: #aaa;
+}
+
+.sok-rensa {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #aaa;
+  padding: 4px;
+  border-radius: 50%;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.sok-rensa:hover { color: #555; background: #f0f0f0; }
+
+.sok-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+  list-style: none;
+  overflow: hidden;
+  z-index: 1000;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.sok-dropdown li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.12s;
+}
+.sok-dropdown li:last-child { border-bottom: none; }
+.sok-dropdown li:hover,
+.sok-dropdown li.aktiv-sok { background: #f0f7f2; }
+.sok-dropdown li.kommande-sok { opacity: 0.55; cursor: default; }
+
+.sok-ikon-item {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  width: 40px;
+  text-align: center;
+}
+
+.sok-info { flex: 1; }
+.sok-namn {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+.sok-namn mark {
+  background: #d4edda;
+  color: #1a5c2a;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.sok-beskrivning {
+  font-size: 0.82rem;
+  color: #777;
+}
+.sok-badge {
+  font-size: 0.75rem;
+  background: #f0f0f0;
+  color: #888;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.sok-tom {
+  padding: 18px;
+  color: #888;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+main {
+  max-width: 960px;
+  margin: 32px auto;
+  padding: 0 16px;
+}
+
+/* --- Projektkort --- */
+.projekt-lista h2 {
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+}
+
+.kort-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.sektion-rubrik {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  color: #1a1a1a;
+}
+
+.kort {
+  background: white;
+  border-radius: 10px;
+  padding: 18px 14px;
+  text-align: center;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.5s ease, transform 0.5s ease,
+              border 0.2s, box-shadow 0.2s;
+  transition-delay: calc(var(--i, 0) * 0.06s);
+}
+
+.kort.synlig {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.kort.kommande.synlig {
+  opacity: 0.42;
+}
+
+.kort:not(.kommande):hover {
+  border-color: #2b6a3a;
+  box-shadow: 0 6px 20px rgba(43,106,58,0.15);
+  transform: translateY(-3px);
+  background: linear-gradient(to bottom, white, #f8fcf9);
+}
+
+.kort.valt {
+  border-color: #2b6a3a;
+  box-shadow: 0 4px 12px rgba(43,106,58,0.2);
+}
+
+.kort.kommande {
+  opacity: 0.42;
+  cursor: default;
+  position: relative;
+}
+
+.kort.kommande::after {
+  content: 'Snart';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.65rem;
+  background: #e8e8e8;
+  color: #888;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.kort .ikon {
+  font-size: 2.8rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.kort h3 {
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.kort p {
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* --- Projektinnehåll --- */
+#projekt-innehall {
+  margin-top: 40px;
+}
+
+.dold {
+  display: none;
+}
+
+/* --- Flikar --- */
+.flikar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #ddd;
+}
+
+.flik {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s;
+}
+
+.flik:hover {
+  color: #2b6a3a;
+}
+
+.flik.aktiv-flik {
+  color: #2b6a3a;
+  font-weight: bold;
+  border-bottom-color: #2b6a3a;
+}
+
+/* --- Projektinfo --- */
+.projekt-rubrik {
+  margin-bottom: 12px;
+}
+
+.info-rad {
+  display: flex;
+  gap: 24px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0 28px;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+/* --- Progress-bar --- */
+.steg-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.steg-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.steg-progress-fill {
+  height: 100%;
+  background: #2b6a3a;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.steg-progress-text {
+  font-size: 0.82rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* --- Överblick (checklista) --- */
+.steg-overblick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.steg-rad {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: white;
+  border-radius: 10px;
+  padding: 16px 18px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.steg-rad:hover {
+  border-color: #2b6a3a;
+  box-shadow: 0 2px 8px rgba(43,106,58,0.1);
+}
+
+.steg-rad.steg-klar {
+  background: #f6faf7;
+}
+
+.steg-rad.steg-klar .steg-rad-info h3 {
+  color: #999;
+  text-decoration: line-through;
+}
+
+/* Checkbox */
+.steg-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: white;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.steg-check:hover {
+  border-color: #2b6a3a;
+}
+
+.steg-check.checked {
+  background: #2b6a3a;
+  border-color: #2b6a3a;
+}
+
+.steg-check.stor {
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+}
+
+/* Stegnummer i raden */
+.steg-rad-nummer {
+  background: #2b6a3a;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.steg-rad-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.steg-rad-info h3 {
+  font-size: 1rem;
+  color: #222;
+  margin: 0;
+  transition: color 0.15s;
+}
+
+.steg-rad-pil {
+  font-size: 1.4rem;
+  color: #ccc;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.steg-rad:hover .steg-rad-pil {
+  color: #2b6a3a;
+}
+
+/* --- Steg-nummer (delad, används i detalj) --- */
+.steg-nummer {
+  background: #2b6a3a;
+  color: white;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* --- Detaljvy --- */
+.steg-detalj {
+  animation: fadein 0.2s ease;
+}
+
+.steg-detalj-tillbaka {
+  background: none;
+  border: none;
+  color: #2b6a3a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.steg-detalj-tillbaka:hover { opacity: 0.7; }
+
+.steg-detalj-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.steg-detalj-header h3 {
+  flex: 1;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+/* Skiss */
+.steg-detalj-skiss {
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.steg-detalj-skiss svg {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+}
+
+/* Text */
+.steg-detalj-text {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+  margin-bottom: 20px;
+}
+
+.steg-detalj-text p {
+  color: #444;
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
+ol.steg-substeg {
+  padding-left: 1.4em;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+ol.steg-substeg li {
+  color: #444;
+  line-height: 1.65;
+  font-size: 1rem;
+  padding-left: 4px;
+}
+
+/* Tips */
+.steg-detalj-tips {
+  background: #fff8e7;
+  border: 1px solid #f0c040;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 0.9rem;
+  color: #8B6000;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* Navigation */
+.steg-detalj-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1.5px solid #e8e8e8;
+}
+
+.steg-nav-knapp {
+  background: white;
+  border: 1.5px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #2b6a3a;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.steg-nav-knapp:hover:not(:disabled) {
+  background: #f0f7f2;
+  border-color: #2b6a3a;
+}
+
+.steg-nav-knapp:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.steg-nav-pos {
+  font-size: 0.88rem;
+  color: #999;
+}
+
+/* --- Inköpslista --- */
+.info-text {
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.lista-tabell {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
+}
+
+.lista-tabell th {
+  background: #2b6a3a;
+  color: white;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.lista-tabell td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.lista-tabell tr:last-child td {
+  border-bottom: none;
+}
+
+.lista-tabell tr:hover td {
+  background: #f9f9f9;
+}
+
+.kategori {
+  background: #f0f0f0 !important;
+  font-weight: bold;
+  color: #444;
+  font-size: 0.82rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --- Dimensionsväljare --- */
+.dim-konfig {
+  background: #fff8e7;
+  border: 2px solid #f0c040;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.dim-kontroller {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.ritvy-knapp {
+  background: #2b6a3a;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+.ritvy-knapp:hover { background: #1e4e2b; }
+
+/* --- Ritvy --- */
+#ritvy-sektion {
+  background: #f0f0f0;
+  border: 1.5px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.ritvy-kontroller {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+}
+.ritvy-kontroller:empty { display: none; }
+.ritvy-kontroller-rubrik {
+  font-size: 1rem;
+  color: #222;
+  margin: 0 0 16px 0;
+  font-weight: 600;
+}
+.ritvy-slider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 28px;
+}
+
+.ritvy-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.stil-knappar {
+  display: flex;
+  gap: 0;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stil-knapp {
+  background: white;
+  border: none;
+  border-right: 1px solid #ddd;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #555;
+  transition: background 0.15s;
+}
+.stil-knapp:last-child { border-right: none; }
+.stil-knapp:hover { background: #f0f0f0; }
+.stil-knapp.aktiv-stil {
+  background: #2b6a3a;
+  color: white;
+  font-weight: bold;
+}
+
+.aterst-knapp {
+  background: white;
+  border: 1.5px solid #ccc;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #555;
+  white-space: nowrap;
+}
+.aterst-knapp:hover { background: #f5f5f5; border-color: #aaa; }
+
+.lager-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.lager-rubrik {
+  font-size: 0.82rem;
+  color: #888;
+  margin-right: 2px;
+}
+.lager-knapp {
+  background: #e8f5e9;
+  border: 1.5px solid #81c784;
+  color: #2e7d32;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.lager-knapp:hover {
+  background: #c8e6c9;
+}
+.lager-knapp.lager-av {
+  background: #f5f5f5;
+  border-color: #ccc;
+  color: #aaa;
+  text-decoration: line-through;
+}
+.lager-knapp.lager-av:hover {
+  background: #eee;
+}
+
+.ritvy-canvas {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+.ritvy-canvas canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 600 / 420;
+}
+.ritvy-canvas #ritvy-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.ritvy-canvas svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dim-ritning {
+  flex: 0 0 280px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0c060;
+  padding: 4px;
+}
+
+.dim-ritning svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dim-rubrik {
+  font-weight: bold;
+  color: #8B6000;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.dim-rad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dim-rad label {
+  font-size: 0.9rem;
+  color: #555;
+  min-width: 40px;
+}
+
+.dim-rad input[type="range"] {
+  width: 130px;
+  accent-color: #2b6a3a;
+  cursor: pointer;
+}
+
+.dim-val {
+  font-weight: bold;
+  color: #2b6a3a;
+  min-width: 40px;
+  font-size: 1rem;
+}
+
+.dim-yta {
+  font-size: 0.9rem;
+  color: #555;
+  border-left: 1px solid #e0c060;
+  padding-left: 20px;
+}
+
+.dim-etikett {
+  font-size: 0.85rem;
+  background: #fff8e7;
+  border: 1px solid #f0c040;
+  color: #8B6000;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-weight: normal;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.antal-andrad {
+  font-weight: bold;
+  color: #2b6a3a;
+}
+
+.pris-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #2b6a3a;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lista-tabell th:last-child {
+  text-align: right;
+}
+
+.totalsumma {
+  background: #2b6a3a;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  margin: 12px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.totalsumma strong {
+  font-size: 1.3rem;
+}
+
+.totalsumma-not {
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.skriv-ut-knapp {
+  background: #2b6a3a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.skriv-ut-knapp:hover {
+  background: #1e4e2b;
+}
+
+/* --- Verktygslista --- */
+.verktyg-lista {
+  list-style: none;
+  margin: 12px 0 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.verktyg-lista li {
+  background: white;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  font-size: 0.95rem;
+}
+
+.verktyg-rubrik {
+  margin: 20px 0 8px;
+  color: #2b6a3a;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 700px) {
+  .steg-rad {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .steg-rad-nummer {
+    width: 26px;
+    height: 26px;
+    font-size: 0.82rem;
+  }
+  .steg-detalj-skiss {
+    padding: 12px;
+  }
+  .steg-detalj-text {
+    padding: 16px;
+  }
+  .steg-nav-knapp {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+  .verktyg-lista {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .hero-titel { font-size: 2.4rem; }
+  .hero-tagline { font-size: 1rem; margin-bottom: 28px; }
+  .hero-content .sok-input { font-size: 1rem; padding: 15px 0; }
+}
+
+@media print {
+  header, .hero-landing, .projekt-lista, .flikar, .skriv-ut-knapp { display: none; }
+  #projekt-innehall { display: block !important; opacity: 1 !important; transform: none !important; }
+  #inkopslista { display: block !important; }
+  #instruktioner, #verktyg { display: none !important; }
+}
+
+/* ============================================================
+   NY PROJEKTVY
+   ============================================================ */
+
+/* Vy-transition */
+#projekt-lista {
+  transition: opacity 0.2s ease;
+}
+#projekt-lista.fade-ut {
+  opacity: 0;
+  pointer-events: none;
+}
+#projekt-innehall {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#projekt-innehall.synlig {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#projekt-innehall.synlig .projekt-hero {
+  animation: fadein 0.4s ease 0.1s both;
+}
+
+#projekt-innehall.synlig .upload-sektion {
+  animation: fadein 0.4s ease 0.2s both;
+}
+
+#projekt-innehall.synlig .flikar {
+  animation: fadein 0.4s ease 0.3s both;
+}
+
+#projekt-innehall.synlig .flik-innehall {
+  animation: fadein 0.4s ease 0.35s both;
+}
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Tillbaka-knapp */
+.tillbaka-knapp {
+  background: none;
+  border: none;
+  color: #2b6a3a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.tillbaka-knapp:hover { opacity: 0.7; }
+
+/* Hero */
+.projekt-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1.5px solid #e8e8e8;
+}
+
+.hero-vanster {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.hero-ikon {
+  font-size: 3.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hero-text h1 {
+  font-size: 2rem;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.hero-text p {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.6;
+  max-width: 480px;
+  margin-bottom: 14px;
+}
+
+.hero-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hero-badge {
+  background: #f0f7f2;
+  border: 1px solid #c8e6d0;
+  color: #2b6a3a;
+  font-size: 0.82rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Kostnadsdisplay */
+.hero-kostnad {
+  background: #2b6a3a;
+  color: white;
+  border-radius: 14px;
+  padding: 20px 26px;
+  text-align: center;
+  min-width: 180px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(43,106,58,0.25);
+  transition: transform 0.15s;
+}
+.hero-kostnad:hover { transform: scale(1.02); }
+
+.kostnad-etikett {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.kostnad-varde {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: all 0.2s;
+}
+
+.kostnad-not {
+  font-size: 0.72rem;
+  opacity: 0.65;
+  margin-top: 6px;
+}
+
+/* Dimensionspanel */
+.pv-dim-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 28px;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1.5px solid #e8e8e8;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .pv-dim-layout { grid-template-columns: 1fr; }
+}
+
+.pv-visualisering {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+.pv-visualisering svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pv-info-panel {
+  text-align: left;
+}
+
+.pv-sammanfattning {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.6;
+  margin: 0 0 18px 0;
+}
+
+.pv-info-panel .ritvy-knapp {
+  width: auto;
+  padding: 14px 32px;
+  font-size: 1rem;
+  border-radius: 10px;
+}
+
+.pv-dim-rubrik {
+  font-size: 1.05rem;
+  color: #222;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Stora sliders */
+.pv-slider-block {
+  margin-bottom: 22px;
+}
+
+.pv-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.pv-slider-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.pv-slider-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2b6a3a;
+  min-width: 52px;
+  text-align: right;
+  transition: color 0.15s;
+}
+
+.pv-slider-block input[type="range"] {
+  width: 100%;
+  height: 6px;
+  accent-color: #2b6a3a;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.pv-slider-minmax {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #bbb;
+  margin-top: 4px;
+}
+
+/* Sammanfattning under sliders */
+.pv-dim-summary {
+  background: #f0f7f2;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.pv-yta-rad {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #444;
+}
+.pv-yta-rad strong {
+  font-size: 1.3rem;
+  color: #2b6a3a;
+}
+
+.pv-dim-tip {
+  font-size: 0.82rem;
+  color: #5a8a6a;
+  margin-top: 6px;
+  min-height: 18px;
+  transition: all 0.2s;
+}
+
+/* Avancerade inställningar */
+.avancerat-toggle {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 0.88rem;
+  color: #666;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.avancerat-toggle:hover { background: #f5f5f5; border-color: #bbb; }
+.avancerat-toggle.aktiv { border-color: #2b6a3a; color: #2b6a3a; background: #f0f7f2; }
+
+.avancerat-pil {
+  transition: transform 0.2s;
+  display: inline-block;
+  font-size: 0.8rem;
+}
+.avancerat-pil.open { transform: rotate(90deg); }
+
+.avancerade-inst {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease, padding 0.2s;
+  padding: 0 2px;
+}
+.avancerade-inst.open {
+  max-height: 400px;
+  padding: 16px 2px 4px;
+}
+
+.avancerat-info {
+  background: #fff8e7;
+  border: 1px solid #f0c040;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.83rem;
+  color: #8B6000;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   BILDUPPLADDNING
+   ============================================================ */
+
+.upload-sektion {
+  background: white;
+  border-radius: 16px;
+  border: 1.5px solid #e8e8e8;
+  padding: 32px 24px;
+  margin-bottom: 28px;
+  animation: fadein 0.25s ease;
+}
+
+.upload-innehall {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.upload-innehall h2 {
+  font-size: 1.4rem;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.upload-beskrivning {
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.upload-yta {
+  border: 2px dashed #c8c8c8;
+  border-radius: 12px;
+  padding: 36px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.upload-yta:hover {
+  border-color: #2b6a3a;
+  background: #f9fdf9;
+}
+
+.upload-yta.dragover {
+  border-color: #2b6a3a;
+  background: #e8f5e9;
+}
+
+.upload-ikon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+}
+
+.upload-ledtext {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.upload-eller {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 10px;
+}
+
+.upload-knapp {
+  display: inline-block;
+  background: #2b6a3a;
+  color: white;
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.upload-knapp:hover {
+  background: #1e4e2b;
+}
+
+.upload-format {
+  font-size: 0.78rem;
+  color: #aaa;
+  margin-top: 12px;
+}
+
+.upload-forhandsvisning {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.upload-forhandsvisning img {
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 10px;
+  border: 1.5px solid #e0e0e0;
+  object-fit: contain;
+}
+
+.upload-byt {
+  display: inline-block;
+  margin-top: 10px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  color: #666;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.upload-byt:hover {
+  border-color: #2b6a3a;
+  color: #2b6a3a;
+}
+
+.upload-knappar {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-fortsatt {
+  background: #2b6a3a;
+  color: white;
+  border: none;
+  padding: 13px 36px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.upload-fortsatt:hover:not(:disabled) {
+  background: #1e4e2b;
+}
+
+.upload-fortsatt:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.upload-hoppa {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 6px 12px;
+  transition: color 0.15s;
+}
+
+.upload-hoppa:hover {
+  color: #555;
+}
+
+.upload-fel {
+  color: #c62828;
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
+/* Ritvy-knapp i ny vy */
+#pv-dim-sektion .ritvy-knapp {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* ============================================================
+   RUBRIKER — Playfair Display
+   ============================================================ */
+
+.projekt-lista h2,
+.hero-text h1,
+.upload-innehall h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* ============================================================
+   FADEUP-ANIMATION FÖR KORT
+   ============================================================ */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   UPLOAD-SEKTION POLISH
+   ============================================================ */
+
+.upload-sektion {
+  background: linear-gradient(to bottom, #ffffff, #f9fdf9);
+}
+
+.upload-ikon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.08); opacity: 0.85; }
+}
+
+.upload-fortsatt:not(:disabled) {
+  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+}
+
+.upload-fortsatt:not(:disabled):hover {
+  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+}
+
+/* ============================================================
+   VY-FLIKAR (pill tabs)
+   ============================================================ */
+
+.vy-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  padding: 4px;
+  background: #e8e8e8;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.vy-tab {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.vy-tab:hover {
+  color: #333;
+  background: rgba(255,255,255,0.5);
+}
+
+.vy-tab.aktiv-vy {
+  background: white;
+  color: #2b6a3a;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.vy-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.vy-tab:disabled:hover {
+  background: transparent;
+  color: #666;
+}
+
+/* ============================================================
+   AI-SEKTION
+   ============================================================ */
+
+.ai-sektion {
+  background: white;
+  border-radius: 16px;
+  border: 1.5px solid #e8e8e8;
+  padding: 28px 24px;
+  margin-bottom: 28px;
+  animation: fadein 0.25s ease;
+}
+
+.ai-innehall {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.ai-bild-container {
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 200px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.ai-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: #f4f1ec;
+  border-radius: 12px;
+  border: 2px dashed #d8d8d8;
+  color: #999;
+}
+
+.ai-placeholder-ikon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+}
+
+.ai-bild-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+.ai-kontroller {
+  text-align: center;
+}
+
+.ai-kontroller-knappar {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.ai-knapp {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.ai-knapp-primar {
+  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  color: white;
+  border: none;
+}
+
+.ai-knapp-primar:hover {
+  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+}
+
+.ai-knapp-sekundar {
+  background: white;
+  color: #2b6a3a;
+  border: 1.5px solid #2b6a3a;
+}
+
+.ai-knapp-sekundar:hover {
+  background: #f0f7f2;
+}
+
+.ai-knapp:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ai-kostnad-info {
+  font-size: 0.82rem;
+  color: #999;
+  margin-top: 8px;
+}
+
+.ai-limit-natt {
+  background: #fff8e7;
+  border: 1px solid #f0c040;
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: #8B6000;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Uppdatera AI-bild knapp i dim-sektionen */
+.ai-uppdatera-knapp {
+  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.ai-uppdatera-knapp:hover {
+  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+}
+
+/* ============================================================
+   SHIMMER LADDNING
+   ============================================================ */
+
+.ai-shimmer {
+  min-height: 300px;
+  background: linear-gradient(110deg, #f0f0f0 8%, #e8e8e8 18%, #f0f0f0 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-shimmer-text {
+  color: #888;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-shimmer-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid #ccc;
+  border-top-color: #2b6a3a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   MASK-EDITOR
+   ============================================================ */
+
+.mask-instruktion {
+  font-size: 0.92rem;
+  color: #555;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.mask-editor {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  border: 1.5px solid #e0e0e0;
+}
+
+.mask-editor img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mask-editor canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.mask-overlay-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  background: rgba(0, 0, 0, 0.30);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+}
+
+.mask-overlay-hint-hidden {
+  opacity: 0;
+}
+
+.mask-overlay-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.mask-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.mask-knapp {
+  background: white;
+  border: 1.5px solid #ccc;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.15s;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.mask-knapp:hover {
+  border-color: #2b6a3a;
+  color: #2b6a3a;
+  background: #f0f7f2;
+}
+
+.mask-knapp-generera {
+  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-left: auto;
+}
+
+.mask-knapp-generera:hover {
+  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+  color: white;
+}
+
+@media (max-width: 500px) {
+  .mask-toolbar {
+    gap: 8px;
+  }
+  .mask-knapp {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+  }
+  .mask-knapp-generera {
+    width: 100%;
+    text-align: center;
+    margin-left: 0;
+  }
+}
