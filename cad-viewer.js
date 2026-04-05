@@ -102,6 +102,9 @@
         metalness: 0.0,
       });
 
+      // CadQuery använder Z-upp, Three.js använder Y-upp — rotera geometrin
+      geometry.rotateX(-Math.PI / 2);
+
       var mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
