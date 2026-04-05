@@ -472,9 +472,10 @@ function uppdateraHojd() {
 function bytRitvyStyle(stil) {
   ritvyStyle = stil;
   document.querySelectorAll('.stil-knapp').forEach(k => k.classList.remove('aktiv-stil'));
-  document.getElementById('stil-' + stil).classList.add('aktiv-stil');
+  var btn = document.getElementById('stil-' + stil);
+  if (btn) btn.classList.add('aktiv-stil');
   const lp = document.getElementById('lager-panel');
-  if (lp) lp.style.display = stil === 'plan' ? 'none' : 'flex';
+  if (lp) lp.style.display = stil === 'plan' || stil.startsWith('cad-') ? 'none' : 'flex';
   renderRitvy();
 }
 
@@ -488,11 +489,20 @@ function renderRitvy() {
   const glCanvas = document.getElementById('ritvy-gl');
   const overlay = document.getElementById('ritvy-overlay');
   const planSvg = document.getElementById('ritvy-svg');
+  const cadContainer = document.getElementById('cad-svg-container');
 
-  if (ritvyStyle === 'plan') {
+  if (ritvyStyle.startsWith('cad-')) {
+    // CAD-vy: dölj allt annat, visa CAD-container
+    if (glCanvas) glCanvas.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
+    if (cadContainer) { cadContainer.classList.remove('dold'); cadContainer.style.display = 'flex'; }
+    hamtaCadSvg(ritvyStyle.replace('cad-', ''));
+  } else if (ritvyStyle === 'plan') {
     // Planvy: dölj WebGL, visa plan-SVG
     if (glCanvas) glCanvas.style.display = 'none';
     if (overlay) overlay.style.display = 'none';
+    if (cadContainer) { cadContainer.classList.add('dold'); cadContainer.style.display = 'none'; }
     if (planSvg) {
       planSvg.classList.remove('dold');
       planSvg.style.display = 'block';
@@ -501,14 +511,55 @@ function renderRitvy() {
       Editor.initListeners();
     }
   } else {
-    // 3D: visa WebGL canvas + overlay, dölj plan-SVG
+    // 3D: visa WebGL canvas + overlay, dölj plan-SVG och CAD
     if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
+    if (cadContainer) { cadContainer.classList.add('dold'); cadContainer.style.display = 'none'; }
     if (glCanvas) glCanvas.style.display = 'block';
     if (overlay) overlay.style.display = 'block';
     rita3DWebGL(aktuellaB, aktuellaL, aktuellaH, ritvyStyle);
   }
   const canvasEl = document.querySelector('.ritvy-canvas');
-  if (canvasEl) canvasEl.style.cursor = ritvyStyle === 'plan' ? 'default' : 'grab';
+  if (canvasEl) canvasEl.style.cursor = (ritvyStyle === 'plan' || ritvyStyle.startsWith('cad-')) ? 'default' : 'grab';
+}
+
+// CAD-server integration
+var cadCache = {};
+var cadServerUrl = 'http://localhost:3002';
+
+function hamtaCadSvg(vy) {
+  var container = document.getElementById('cad-svg-container');
+  if (!container || !valtProjekt) return;
+
+  var cacheKey = valtProjekt + '_' + vy + '_' + aktuellaB + '_' + aktuellaL + '_' + aktuellaH;
+  if (cadCache[cacheKey]) {
+    container.innerHTML = cadCache[cacheKey];
+    return;
+  }
+
+  container.innerHTML = '<p style="color:#888;font-style:italic">Laddar CAD-ritning...</p>';
+
+  var url = cadServerUrl + '/cad/' + valtProjekt + '?bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.svgs && data.svgs[vy]) {
+        cadCache[cacheKey] = data.svgs[vy];
+        container.innerHTML = data.svgs[vy];
+        // Skala SVG:en att fylla containern
+        var svg = container.querySelector('svg');
+        if (svg) {
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+          svg.style.maxHeight = '600px';
+        }
+      } else {
+        container.innerHTML = '<p style="color:red">Kunde inte ladda ritning</p>';
+      }
+    })
+    .catch(function(err) {
+      container.innerHTML = '<p style="color:red">CAD-server ej tillgänglig: ' + err.message + '</p>';
+    });
 }
 
 function initRitvyDrag() {
