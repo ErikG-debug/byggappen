@@ -14,7 +14,8 @@ body {
 .hero-landing {
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 55vh;
+  min-height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,53 +59,6 @@ body {
   line-height: 1.5;
 }
 
-.hero-content .sok-wrapper {
-  max-width: 100%;
-}
-
-.hero-content .sok-falt-container {
-  padding: 0 20px;
-  border-radius: 14px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-}
-
-.hero-content .sok-input {
-  font-size: 1.15rem;
-  padding: 18px 0;
-}
-
-.hero-content .sok-ikon {
-  font-size: 1.3rem;
-}
-
-.hero-content .sok-dropdown {
-  border-radius: 14px;
-}
-
-/* Scroll-indikator */
-.hero-scroll-indicator {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  cursor: pointer;
-}
-
-.scroll-chevron {
-  display: block;
-  width: 28px;
-  height: 28px;
-  border-right: 3px solid rgba(255,255,255,0.7);
-  border-bottom: 3px solid rgba(255,255,255,0.7);
-  transform: rotate(45deg);
-  animation: bounceDown 2s ease-in-out infinite;
-}
-
-@keyframes bounceDown {
-  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.7; }
-  50%      { transform: rotate(45deg) translate(6px, 6px); opacity: 1; }
-}
 
 /* --- Header (sticky) --- */
 header {
@@ -188,73 +142,56 @@ header.scrolled {
 }
 .sok-rensa:hover { color: #555; background: #f0f0f0; }
 
-.sok-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.18);
-  list-style: none;
-  overflow: hidden;
-  z-index: 1000;
-  max-height: 380px;
-  overflow-y: auto;
-}
-
-.sok-dropdown li {
+/* Sökfält vid kort-header */
+.kort-sok-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 13px 18px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.12s;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
-.sok-dropdown li:last-child { border-bottom: none; }
-.sok-dropdown li:hover,
-.sok-dropdown li.aktiv-sok { background: #f0f7f2; }
-.sok-dropdown li.kommande-sok { opacity: 0.55; cursor: default; }
 
-.sok-ikon-item {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-  width: 40px;
+.sok-kort-wrapper {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1.5px solid #ddd;
+  border-radius: 10px;
+  padding: 8px 14px;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.sok-kort-wrapper:focus-within {
+  border-color: #2b6a3a;
+  box-shadow: 0 0 0 3px rgba(43,106,58,0.1);
+}
+
+.sok-kort-wrapper .sok-ikon {
+  font-size: 0.9rem;
+  position: static;
+}
+
+.sok-input-kort {
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: transparent;
+  width: 160px;
+  color: #333;
+}
+
+.sok-input-kort::placeholder {
+  color: #aaa;
+}
+
+.sok-inga-resultat {
   text-align: center;
-}
-
-.sok-info { flex: 1; }
-.sok-namn {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 2px;
-}
-.sok-namn mark {
-  background: #d4edda;
-  color: #1a5c2a;
-  border-radius: 2px;
-  padding: 0 1px;
-}
-.sok-beskrivning {
-  font-size: 0.82rem;
-  color: #777;
-}
-.sok-badge {
-  font-size: 0.75rem;
-  background: #f0f0f0;
-  color: #888;
-  padding: 2px 8px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
-
-.sok-tom {
-  padding: 18px;
   color: #888;
   font-size: 0.9rem;
-  text-align: center;
+  padding: 24px 0;
 }
 
 main {
@@ -1986,5 +1923,291 @@ ol.steg-substeg li {
     width: 100%;
     text-align: center;
     margin-left: 0;
+  }
+}
+
+/* ============================================================
+   FÖRBÄTTRADE PROJEKTKORT
+   ============================================================ */
+
+.kort-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.kort {
+  padding: 0;
+  text-align: left;
+  overflow: hidden;
+}
+
+.kort-bild {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px 10px 0 0;
+}
+
+.kort-bild-ikon {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+}
+
+.kort-info {
+  padding: 16px 18px 18px;
+}
+
+.kort-info h3 {
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.kort-info p {
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.kort-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.kort-kostnad {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2b6a3a;
+}
+
+/* ============================================================
+   STEGINDIKATOR
+   ============================================================ */
+
+.steg-indikator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 28px;
+  padding: 16px 0;
+}
+
+.steg-indikator-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.steg-indikator-item.aktivt-steg {
+  opacity: 1;
+}
+
+.steg-indikator-item.klart-steg {
+  opacity: 0.7;
+}
+
+.steg-nummer {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.3s, color 0.3s;
+}
+
+.aktivt-steg .steg-nummer {
+  background: #2b6a3a;
+  color: white;
+}
+
+.klart-steg .steg-nummer {
+  background: #a8d5ba;
+  color: #2b6a3a;
+}
+
+.steg-etikett {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #888;
+  transition: color 0.3s;
+}
+
+.aktivt-steg .steg-etikett {
+  color: #2b6a3a;
+  font-weight: 600;
+}
+
+.steg-indikator-linje {
+  width: 40px;
+  height: 2px;
+  background: #ddd;
+  margin: 0 8px;
+  transition: background 0.3s;
+}
+
+.steg-indikator-linje.klar-linje {
+  background: #a8d5ba;
+}
+
+/* ============================================================
+   INSPIRATIONSSEKTION
+   ============================================================ */
+
+.inspiration-sektion {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid #e8e8e8;
+  margin-bottom: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.inspiration-hero-bild {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspiration-innehall {
+  padding: 32px 28px 36px;
+}
+
+.inspiration-titel {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+}
+
+.inspiration-budskap {
+  font-size: 1.1rem;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 600px;
+}
+
+.inspiration-galleri {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.insp-galleri-bild {
+  height: 140px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insp-galleri-text {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  opacity: 0.9;
+}
+
+.inspiration-overblick {
+  background: #f8faf8;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+
+.inspiration-overblick h3 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+}
+
+.insp-feature {
+  font-size: 0.92rem;
+  color: #2b6a3a;
+  padding: 4px 0;
+}
+
+.inspiration-fakta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.inspiration-cta {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.inspiration-cta:hover {
+  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(43,106,58,0.3);
+}
+
+/* Fade-in animation for inspiration */
+#projekt-innehall.synlig .inspiration-sektion:not(.dold) {
+  animation: fadein 0.4s ease 0.15s both;
+}
+
+#projekt-innehall.synlig .steg-indikator:not(.dold) {
+  animation: fadein 0.3s ease 0.1s both;
+}
+
+/* ============================================================
+   MOBIL RESPONSIVITET
+   ============================================================ */
+
+@media (max-width: 600px) {
+  .kort-grid {
+    grid-template-columns: 1fr;
+  }
+  .inspiration-galleri {
+    grid-template-columns: 1fr;
+  }
+  .steg-etikett {
+    display: none;
+  }
+  .steg-indikator-linje {
+    width: 24px;
+  }
+  .inspiration-hero-bild {
+    height: 160px;
+  }
+  .inspiration-innehall {
+    padding: 24px 20px 28px;
+  }
+  .inspiration-titel {
+    font-size: 1.6rem;
+  }
+  .inspiration-budskap {
+    font-size: 1rem;
   }
 }

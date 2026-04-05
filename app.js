@@ -1253,15 +1253,30 @@ function planRitning(b, l, h) {
 
 let valtProjekt = null;
 
+const projektGradients = {
+  lekstuga: ['#f5e6d3', '#d4a574'],
+  altan:    ['#e8d5b7', '#8b7355'],
+  pergola:  ['#d4edda', '#87CEEB'],
+  _default: ['#e0e0e0', '#c0c0c0']
+};
+
 function byggKort() {
   const grid = document.getElementById('kort-grid');
-  grid.innerHTML = sokbara.map((p, i) => `
-    <div class="kort ${p.kommande ? 'kommande' : ''}" style="--i:${i}" ${!p.kommande ? `onclick="visaProjekt('${p.id}')" id="kort-${p.id}"` : ''}>
-      <span class="ikon">${p.ikon}</span>
-      <h3>${p.namn}</h3>
-      <p>${p.beskrivning}</p>
-    </div>
-  `).join('');
+  grid.innerHTML = sokbara.map((p, i) => {
+    const colors = p.gradientColors || projektGradients[p.id] || projektGradients._default;
+    const grad = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+    return `
+    <div class="kort ${p.kommande ? 'kommande' : ''}" style="--i:${i}" id="kort-${p.id}" ${!p.kommande ? `onclick="visaProjekt('${p.id}')"` : ''}>
+      <div class="kort-bild" style="background: ${grad}">
+        <span class="kort-bild-ikon">${p.ikon}</span>
+      </div>
+      <div class="kort-info">
+        <h3>${p.namn}</h3>
+        <p>${p.beskrivning}</p>
+        ${p.kostnadRange ? `<div class="kort-kostnad">${p.kostnadRange}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function beraknaKostnad(p, b, l) {
@@ -1347,11 +1362,7 @@ function visaProjekt(id) {
   document.getElementById('pv-ikon').textContent        = meta?.ikon ?? p.ikon ?? '';
   document.getElementById('pv-namn').textContent        = p.namn;
   document.getElementById('pv-beskrivning').textContent = meta?.beskrivning ?? '';
-  document.getElementById('pv-badges').innerHTML = [
-    `<span class="hero-badge">\u23F1 ${p.tid}</span>`,
-    `<span class="hero-badge">\u{1F528} ${p.svarighetsgrad}</span>`,
-    `<span class="hero-badge">\u{1F465} ${p.personer}</span>`
-  ].join('');
+  document.getElementById('pv-badges').innerHTML = '';
 
   // Dölj dimensioner tills upload-steget är klart
   document.getElementById('pv-dim-sektion').classList.add('dold');
@@ -1386,8 +1397,94 @@ function visaProjekt(id) {
   byttFlik('instruktioner');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // Visa upload-steget
+  // Visa inspirationsfas istället för upload direkt
+  visaInspirationFas(id);
+}
+
+// ============================================================
+// INSPIRATION & STEGINDIKATOR
+// ============================================================
+
+function visaInspirationFas(id) {
+  const p = projekt[id];
+  if (!p || !p.inspiration) {
+    // Inget inspirationsdata — hoppa direkt till upload
+    document.querySelector('.projekt-hero').classList.remove('dold');
+    document.querySelector('.flikar').classList.remove('dold');
+    visaUploadSteg();
+    return;
+  }
+
+  const insp = p.inspiration;
+  const sek = document.getElementById('pv-inspiration');
+
+  // Fyll hero-gradient
+  document.getElementById('insp-hero-bild').style.background =
+    'linear-gradient(135deg, ' + insp.gradientColors[0] + ', ' + insp.gradientColors[1] + ')';
+
+  // Namn och budskap
+  document.getElementById('insp-namn').textContent = p.namn;
+  document.getElementById('insp-budskap').textContent = insp.budskap;
+
+  // Galleri (bilder eller placeholder-gradienter)
+  var galleri = document.getElementById('insp-galleri');
+  galleri.innerHTML = insp.galleri.map(function(g) {
+    if (g.bild) {
+      return '<div class="insp-galleri-bild" style="background-image: url(' + g.bild + '); background-size: cover; background-position: center"></div>';
+    }
+    return '<div class="insp-galleri-bild" style="background: ' + g.gradient + '">' +
+      '<span class="insp-galleri-text">' + g.text + '</span></div>';
+  }).join('');
+
+  // Features (vad som ingår)
+  document.getElementById('insp-features').innerHTML = insp.inkluderar.map(function(f) {
+    return '<div class="insp-feature">\u2713 ' + f + '</div>';
+  }).join('');
+
+  // Fakta-badges
+  document.getElementById('insp-fakta').innerHTML =
+    '<span class="hero-badge">\u{1F4B0} ' + insp.kostnadRange + '</span>';
+
+  // Visa inspiration, dölj tekniska sektioner
+  sek.classList.remove('dold');
+  document.querySelector('.projekt-hero').classList.add('dold');
+  document.querySelector('.flikar').classList.add('dold');
+  document.getElementById('instruktioner').classList.add('dold');
+  document.getElementById('inkopslista').classList.add('dold');
+  document.getElementById('verktyg').classList.add('dold');
+
+  // Stegindikator
+  document.getElementById('pv-steg-indikator').classList.remove('dold');
+  uppdateraStegIndikator(1);
+}
+
+function startaProjektFranInspiration() {
+  // Dölj inspiration
+  document.getElementById('pv-inspiration').classList.add('dold');
+
+  // Visa projekt-hero, flikar och upload
+  document.querySelector('.projekt-hero').classList.remove('dold');
+  document.querySelector('.flikar').classList.remove('dold');
+
+  // Återställ flikinnehåll
+  byttFlik('instruktioner');
+
   visaUploadSteg();
+  uppdateraStegIndikator(2);
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function uppdateraStegIndikator(aktivtSteg) {
+  document.querySelectorAll('.steg-indikator-item').forEach(function(item) {
+    var steg = parseInt(item.dataset.steg);
+    item.classList.toggle('aktivt-steg', steg === aktivtSteg);
+    item.classList.toggle('klart-steg', steg < aktivtSteg);
+  });
+  // Uppdatera linjer
+  document.querySelectorAll('.steg-indikator-linje').forEach(function(linje, idx) {
+    linje.classList.toggle('klar-linje', idx < aktivtSteg - 1);
+  });
 }
 
 // ============================================================
@@ -1414,6 +1511,7 @@ function hoppaOverUpload() {
   document.getElementById('pv-upload-sektion').classList.add('dold');
   visaVyTabs(false);
   bytVy('3d');
+  uppdateraStegIndikator(3);
 }
 
 function gaVidare() {
@@ -1421,6 +1519,7 @@ function gaVidare() {
   visaVyTabs(true);
   bytVy('ai');
   visaMaskEditor();
+  uppdateraStegIndikator(3);
 }
 
 function visaVyTabs(medAI) {
@@ -1623,6 +1722,14 @@ function gaaTillbaka() {
     var aiCont = document.getElementById('ai-bild-container');
     if (aiCont) aiCont.innerHTML = '<div class="ai-placeholder"><span class="ai-placeholder-ikon">\u2728</span><p>Din AI-visualisering visas här</p></div>';
 
+    // Dölj inspiration och stegindikator
+    document.getElementById('pv-inspiration').classList.add('dold');
+    document.getElementById('pv-steg-indikator').classList.add('dold');
+    // Återställ hero och flikar till synliga (för nästa projektbesök)
+    document.querySelector('.projekt-hero').classList.remove('dold');
+    document.querySelector('.flikar').classList.remove('dold');
+    document.getElementById('instruktioner').classList.remove('dold');
+
     // Visa hero + kortlista
     const heroLanding = document.getElementById('hero-landing');
     if (heroLanding) heroLanding.classList.remove('dold');
@@ -1632,6 +1739,9 @@ function gaaTillbaka() {
 
     // Kort redan synliga (ingen re-animation)
     document.querySelectorAll('.kort').forEach(k => k.classList.add('synlig'));
+
+    // Rensa sökfilter
+    rensaSok();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, 400);
@@ -1685,11 +1795,7 @@ function renderInstruktioner(p) {
 
   el.innerHTML = `
     <h2 class="projekt-rubrik">Bygginstruktioner \u2014 ${p.namn}</h2>
-    <div class="info-rad">
-      <span>&#9201; Tids\u00e5tg\u00e5ng: ${p.tid}</span>
-      <span>&#128296; Sv\u00e5righetsgrad: ${p.svarighetsgrad}</span>
-      <span>&#128101; Rekommenderas: ${p.personer}</span>
-    </div>
+    <div class="info-rad"></div>
 
     <div class="steg-progress">
       <div class="steg-progress-bar">
@@ -1842,148 +1948,81 @@ function byttFlik(flikNamn) {
   document.querySelectorAll('.flik').forEach(knapp => {
     knapp.classList.toggle('aktiv-flik', knapp.getAttribute('onclick').includes(flikNamn));
   });
+  // Uppdatera stegindikator: instruktioner = bygg-fasen (bara om vi passerat inspirationen)
+  if (flikNamn === 'instruktioner' && valtProjekt && document.getElementById('pv-inspiration').classList.contains('dold')) {
+    uppdateraStegIndikator(4);
+  }
 }
 
 // ============================================================
 // SOK
 // ============================================================
 
-let aktivSokIndex = -1;
-
 function sokProjekt(q) {
-  const rensa = document.getElementById('sok-rensa');
-  rensa.style.display = q.length > 0 ? '' : 'none';
-
-  const dropdown = document.getElementById('sok-dropdown');
-  aktivSokIndex = -1;
-
-  if (q.trim() === '') {
-    const tillgangliga = sokbara.filter(p => !p.kommande);
-    const kommande = sokbara.filter(p => p.kommande);
-    visaSokResultat([...tillgangliga, ...kommande], '');
-    return;
-  }
-
   const term = q.toLowerCase().trim();
-  const traffar = sokbara
-    .map(p => {
-      const namnLower = p.namn.toLowerCase();
-      let poang = 0;
-      if (namnLower === term) poang = 100;
-      else if (namnLower.startsWith(term)) poang = 80;
-      else if (namnLower.includes(term)) poang = 60;
-      else if (p.nyckelord.some(k => k.startsWith(term))) poang = 40;
-      else if (p.nyckelord.some(k => k.includes(term))) poang = 20;
-      return { ...p, poang };
-    })
-    .filter(p => p.poang > 0)
-    .sort((a, b) => b.poang - a.poang);
+  const kort = document.querySelectorAll('#kort-grid .kort');
+  var ingenTraff = true;
 
-  visaSokResultat(traffar, term);
-}
+  kort.forEach(function(el) {
+    const id = (el.id || '').replace('kort-', '');
+    const p = sokbara.find(s => s.id === id) || sokbara.find(s => s.namn === el.querySelector('h3')?.textContent);
+    if (!p) { el.style.display = ''; return; }
 
-function visaSokResultat(lista, term) {
-  const dropdown = document.getElementById('sok-dropdown');
+    if (term === '') {
+      el.style.display = '';
+      ingenTraff = false;
+      return;
+    }
 
-  if (lista.length === 0) {
-    dropdown.innerHTML = `<li class="sok-tom">Inga resultat f\u00f6r "<strong>${term}</strong>" \u2014 fler konstruktioner tillkommer.</li>`;
-    dropdown.classList.remove('dold');
-    return;
-  }
+    const namnLower = p.namn.toLowerCase();
+    const match = namnLower.includes(term) ||
+      (p.nyckelord && p.nyckelord.some(k => k.includes(term)));
 
-  dropdown.innerHTML = lista.map((p, i) => {
-    const namnHl = term ? markeraText(p.namn, term) : p.namn;
-    const kommandeBadge = p.kommande ? '<span class="sok-badge">Kommer snart</span>' : '';
-    return `<li
-      role="option"
-      class="${p.kommande ? 'kommande-sok' : ''}"
-      data-id="${p.id}"
-      data-kommande="${p.kommande}"
-      onmousedown="${p.kommande ? '' : `valjSokResultat('${p.id}')`}"
-      onmouseover="aktiveraSokIndex(${i})"
-    >
-      <span class="sok-ikon-item">${p.ikon}</span>
-      <span class="sok-info">
-        <span class="sok-namn">${namnHl}</span>
-        <span class="sok-beskrivning">${p.beskrivning}</span>
-      </span>
-      ${kommandeBadge}
-    </li>`;
-  }).join('');
-
-  dropdown.classList.remove('dold');
-}
-
-function markeraText(text, term) {
-  const idx = text.toLowerCase().indexOf(term.toLowerCase());
-  if (idx === -1) return text;
-  return text.slice(0, idx) +
-    `<mark>${text.slice(idx, idx + term.length)}</mark>` +
-    text.slice(idx + term.length);
-}
-
-function aktiveraSokIndex(i) {
-  aktivSokIndex = i;
-  uppdateraAktivSokRad();
-}
-
-function uppdateraAktivSokRad() {
-  document.querySelectorAll('#sok-dropdown li').forEach((li, i) => {
-    li.classList.toggle('aktiv-sok', i === aktivSokIndex);
+    if (match) {
+      el.style.display = '';
+      ingenTraff = false;
+    } else {
+      el.style.display = 'none';
+    }
   });
+
+  // Visa/dölj "inga resultat"-meddelande
+  var tomMsg = document.getElementById('sok-inga-resultat');
+  if (tomMsg) {
+    tomMsg.style.display = (term !== '' && ingenTraff) ? '' : 'none';
+    if (term !== '' && ingenTraff) {
+      tomMsg.textContent = 'Inga resultat f\u00f6r "' + q.trim() + '" \u2014 fler konstruktioner tillkommer.';
+    }
+  }
 }
 
 function sokTangent(e) {
-  const dropdown = document.getElementById('sok-dropdown');
-  const rader = dropdown.querySelectorAll('li:not(.sok-tom)');
-  if (dropdown.classList.contains('dold') || rader.length === 0) return;
-
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    aktivSokIndex = Math.min(aktivSokIndex + 1, rader.length - 1);
-    uppdateraAktivSokRad();
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    aktivSokIndex = Math.max(aktivSokIndex - 1, 0);
-    uppdateraAktivSokRad();
+  if (e.key === 'Escape') {
+    e.target.value = '';
+    sokProjekt('');
+    e.target.blur();
   } else if (e.key === 'Enter') {
-    const aktiv = rader[aktivSokIndex];
-    if (aktiv && aktiv.dataset.kommande !== 'true') {
-      valjSokResultat(aktiv.dataset.id);
+    // Hitta första synliga icke-kommande kort och öppna det
+    var kort = document.querySelectorAll('#kort-grid .kort:not(.kommande)');
+    for (var i = 0; i < kort.length; i++) {
+      if (kort[i].style.display !== 'none') {
+        var id = (kort[i].id || '').replace('kort-', '');
+        if (id) {
+          e.target.value = '';
+          sokProjekt('');
+          visaProjekt(id);
+        }
+        break;
+      }
     }
-  } else if (e.key === 'Escape') {
-    stangDropdown();
   }
-}
-
-function valjSokResultat(id) {
-  stangDropdown();
-  document.getElementById('sok-input').value = '';
-  document.getElementById('sok-rensa').style.display = 'none';
-  visaProjekt(id);
-  setTimeout(() => {
-    document.getElementById('projekt-innehall').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
 }
 
 function rensaSok() {
-  const inp = document.getElementById('sok-input');
-  inp.value = '';
-  inp.focus();
-  document.getElementById('sok-rensa').style.display = 'none';
-  stangDropdown();
+  var kortInput = document.getElementById('sok-input-kort');
+  if (kortInput) kortInput.value = '';
+  sokProjekt('');
 }
-
-function stangDropdown() {
-  document.getElementById('sok-dropdown').classList.add('dold');
-  aktivSokIndex = -1;
-}
-
-document.addEventListener('click', (e) => {
-  if (!document.getElementById('sok-container').contains(e.target)) {
-    stangDropdown();
-  }
-});
 
 // Upload event listeners
 document.getElementById('upload-input').addEventListener('change', function(e) {

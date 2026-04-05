@@ -920,6 +920,17 @@ const projekt = {
         "🪜 Stege, 3–4 m",
         "🔧 Skiftnyckel"
       ]
+    },
+    inspiration: {
+      gradientColors: ['#f5e6d3', '#d4a574'],
+      galleri: [
+        { gradient: 'linear-gradient(135deg, #f5e6d3, #c4956a)', text: 'Foto kommer snart' },
+        { gradient: 'linear-gradient(135deg, #d4a574, #8b6914)', text: 'Foto kommer snart' },
+        { gradient: 'linear-gradient(135deg, #e8d5b7, #a8d5ba)', text: 'Foto kommer snart' }
+      ],
+      budskap: 'En lekstuga är det perfekta första byggprojektet — och barnen kommer älska att hjälpa till! Du behöver inga förkunskaper, bara lite tålamod och en ledig helg.',
+      kostnadRange: '5 000 – 12 000 kr',
+      inkluderar: ['Steg-för-steg instruktioner med bilder', 'Komplett inköpslista', '3D-modell du kan vrida och vända', 'Detaljritningar med mått']
     }
   },
 
@@ -1041,6 +1052,17 @@ const projekt = {
         "🔧 Skiftnyckel och ringnyckel M12",
         "⛏️ Spade (för grundhål)"
       ]
+    },
+    inspiration: {
+      gradientColors: ['#e8d5b7', '#8b7355'],
+      galleri: [
+        { bild: 'assets/altan-1.jpg' },
+        { bild: 'assets/altan-2.jpg' },
+        { gradient: 'linear-gradient(135deg, #f0e6d3, #b8956a)', text: 'Foto kommer snart' }
+      ],
+      budskap: 'En egen altan förvandlar trädgården till ett extra rum. Det här är ett projekt som de flesta klarar på en helg — och du kommer använda resultatet varje sommar.',
+      kostnadRange: '8 000 – 20 000 kr',
+      inkluderar: ['Steg-för-steg instruktioner med bilder', 'Komplett inköpslista', '3D-modell du kan vrida och vända', 'Detaljritningar med mått']
     }
   },
 
@@ -1135,7 +1157,18 @@ const projekt = {
       { namn: "Vinkelj\u00e4rn", dim: "\u2014", antal: 8, enhet: "st", not: "Stolpe\u2013balk", totalt: 232, skala: "perimeter" },
       { kategori: "Ytbehandling" },
       { namn: "Tr\u00e4olja/lasyr", dim: "\u2014", antal: 2, enhet: "liter", not: "", totalt: 378, skala: "area" }
-    ]
+    ],
+    inspiration: {
+      gradientColors: ['#d4edda', '#87CEEB'],
+      galleri: [
+        { gradient: 'linear-gradient(135deg, #d4edda, #a8d5ba)', text: 'Foto kommer snart' },
+        { gradient: 'linear-gradient(135deg, #87CEEB, #5fa8d3)', text: 'Foto kommer snart' },
+        { gradient: 'linear-gradient(135deg, #c8e6c9, #d4a574)', text: 'Foto kommer snart' }
+      ],
+      budskap: 'En pergola ger tr\u00e4dg\u00e5rden karakt\u00e4r direkt \u2014 och \u00e4r f\u00f6rv\u00e5nansv\u00e4rt enkel att bygga. Fyra stolpar, n\u00e5gra balkar, och du har skapat en plats du vill vara p\u00e5.',
+      kostnadRange: '4 000 \u2013 10 000 kr',
+      inkluderar: ['Steg-f\u00f6r-steg instruktioner med bilder', 'Komplett ink\u00f6pslista', '3D-modell du kan vrida och v\u00e4nda', 'Detaljritningar med m\u00e5tt']
+    }
   }
 };
 
@@ -1148,7 +1181,11 @@ const sokbara = [
     ikon: p.ikon,
     beskrivning: p.beskrivning,
     nyckelord: p.nyckelord || [],
-    kommande: p.kommande || false
+    kommande: p.kommande || false,
+    tid: p.tid,
+    svarighetsgrad: p.svarighetsgrad,
+    kostnadRange: p.inspiration ? p.inspiration.kostnadRange : null,
+    gradientColors: p.inspiration ? p.inspiration.gradientColors : null
   })),
   // Kommande projekt (annu ej implementerade)
   { id: 'staket', namn: 'Staket / Plank', ikon: '\u{1F532}', beskrivning: 'Trä- eller plankstaket', nyckelord: ['staket', 'plank', 'inhägnad', 'grind', 'tomtgräns', 'spjäla'], kommande: true },
