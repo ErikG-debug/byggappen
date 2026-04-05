@@ -489,19 +489,51 @@ function renderRitvy() {
   const glCanvas = document.getElementById('ritvy-gl');
   const overlay = document.getElementById('ritvy-overlay');
   const planSvg = document.getElementById('ritvy-svg');
-  const cadContainer = document.getElementById('cad-svg-container');
+  const cadSvgContainer = document.getElementById('cad-svg-container');
+  const cad3dContainer = document.getElementById('cad-3d-container');
 
-  // Dölj gamla renderare
+  // Dölj allt först
   if (glCanvas) glCanvas.style.display = 'none';
   if (overlay) overlay.style.display = 'none';
   if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
+  if (cadSvgContainer) { cadSvgContainer.classList.add('dold'); cadSvgContainer.style.display = 'none'; }
+  if (cad3dContainer) { cad3dContainer.classList.add('dold'); cad3dContainer.style.display = 'none'; }
 
-  // Visa CAD-container
-  if (cadContainer) { cadContainer.classList.remove('dold'); cadContainer.style.display = 'flex'; }
-  hamtaCadSvg(ritvyStyle.replace('cad-', ''));
+  if (ritvyStyle === 'cad-iso') {
+    // Interaktiv 3D via Three.js
+    if (cad3dContainer) {
+      cad3dContainer.classList.remove('dold');
+      cad3dContainer.style.display = 'block';
+    }
+    laddaCad3D();
+  } else {
+    // Statiska 2D SVG-vyer
+    if (cadSvgContainer) {
+      cadSvgContainer.classList.remove('dold');
+      cadSvgContainer.style.display = 'flex';
+    }
+    hamtaCadSvg(ritvyStyle.replace('cad-', ''));
+  }
 
   const canvasEl = document.querySelector('.ritvy-canvas');
-  if (canvasEl) canvasEl.style.cursor = 'default';
+  if (canvasEl) canvasEl.style.cursor = ritvyStyle === 'cad-iso' ? 'grab' : 'default';
+}
+
+// 3D-modell via Three.js
+var cad3dLaddad = '';
+
+function laddaCad3D() {
+  if (!valtProjekt || !window.CadViewer) return;
+
+  var url = cadServerUrl + '/cad/' + valtProjekt + '/3d?bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
+  var key = valtProjekt + '_' + aktuellaB + '_' + aktuellaL + '_' + aktuellaH;
+
+  CadViewer.init('cad-3d-container');
+
+  if (cad3dLaddad !== key) {
+    cad3dLaddad = key;
+    CadViewer.load(url);
+  }
 }
 
 // CAD-server integration
