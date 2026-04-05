@@ -325,7 +325,7 @@ function uppdateraDimensioner() {
 // ============================================================
 
 let ritvyOpen  = false;
-let ritvyStyle = 'teknisk';
+let ritvyStyle = 'cad-iso';
 let aktuellaH  = 0.6;
 let rotAz      = Math.PI / 5;
 let rotEl      = Math.PI / 4;
@@ -491,35 +491,17 @@ function renderRitvy() {
   const planSvg = document.getElementById('ritvy-svg');
   const cadContainer = document.getElementById('cad-svg-container');
 
-  if (ritvyStyle.startsWith('cad-')) {
-    // CAD-vy: dölj allt annat, visa CAD-container
-    if (glCanvas) glCanvas.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
-    if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
-    if (cadContainer) { cadContainer.classList.remove('dold'); cadContainer.style.display = 'flex'; }
-    hamtaCadSvg(ritvyStyle.replace('cad-', ''));
-  } else if (ritvyStyle === 'plan') {
-    // Planvy: dölj WebGL, visa plan-SVG
-    if (glCanvas) glCanvas.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
-    if (cadContainer) { cadContainer.classList.add('dold'); cadContainer.style.display = 'none'; }
-    if (planSvg) {
-      planSvg.classList.remove('dold');
-      planSvg.style.display = 'block';
-      planSvg.setAttribute('viewBox', '0 0 840 680');
-      planSvg.innerHTML = planRitning(aktuellaB, aktuellaL, aktuellaH);
-      Editor.initListeners();
-    }
-  } else {
-    // 3D: visa WebGL canvas + overlay, dölj plan-SVG och CAD
-    if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
-    if (cadContainer) { cadContainer.classList.add('dold'); cadContainer.style.display = 'none'; }
-    if (glCanvas) glCanvas.style.display = 'block';
-    if (overlay) overlay.style.display = 'block';
-    rita3DWebGL(aktuellaB, aktuellaL, aktuellaH, ritvyStyle);
-  }
+  // Dölj gamla renderare
+  if (glCanvas) glCanvas.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+  if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
+
+  // Visa CAD-container
+  if (cadContainer) { cadContainer.classList.remove('dold'); cadContainer.style.display = 'flex'; }
+  hamtaCadSvg(ritvyStyle.replace('cad-', ''));
+
   const canvasEl = document.querySelector('.ritvy-canvas');
-  if (canvasEl) canvasEl.style.cursor = (ritvyStyle === 'plan' || ritvyStyle.startsWith('cad-')) ? 'default' : 'grab';
+  if (canvasEl) canvasEl.style.cursor = 'default';
 }
 
 // CAD-server integration

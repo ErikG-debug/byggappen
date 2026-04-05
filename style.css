@@ -770,13 +770,6 @@ ol.steg-substeg li {
   color: white;
   font-weight: bold;
 }
-.stil-separator {
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  color: #ccc;
-  font-size: 0.9rem;
-}
 
 .aterst-knapp {
   background: white;
