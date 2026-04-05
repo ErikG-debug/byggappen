@@ -547,6 +547,77 @@ main {
   max-height: 300px;
 }
 
+.steg-detalj-skiss img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+/* Bildgalleri — flera vyer per steg */
+.steg-bilder {
+  margin-bottom: 24px;
+}
+
+.steg-bild-huvud {
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.steg-bild-huvud img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.steg-bild-bildtext {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+
+.steg-bild-detaljer {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.steg-bild-thumb {
+  flex: 0 0 auto;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s;
+  width: 120px;
+}
+
+.steg-bild-thumb:hover {
+  border-color: #2d6a2e;
+}
+
+.steg-bild-thumb.aktiv {
+  border-color: #2d6a2e;
+  box-shadow: 0 0 0 1px #2d6a2e;
+}
+
+.steg-bild-thumb img {
+  width: 100%;
+  border-radius: 4px;
+}
+
+.steg-bild-thumb span {
+  display: block;
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 4px;
+}
+
 /* Text */
 .steg-detalj-text {
   background: white;

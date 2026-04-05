@@ -868,6 +868,44 @@ const projekt = {
         }
       }
     ],
+    lagerPerSteg: [
+      null,                                                                              // 1. Markarbete
+      null,                                                                              // 2. Grundplintar
+      { vyer: [                                                                          // 3. Grundramen
+        { namn: "Översikt", nya: ["Golvreglar"], gamla: [] },
+      ]},
+      { vyer: [                                                                          // 4. Golvreglar
+        { namn: "Översikt", nya: ["Golvreglar"], gamla: [] },
+      ]},
+      { vyer: [                                                                          // 5. Golvbräder
+        { namn: "Översikt", nya: ["Golv"], gamla: ["Golvreglar"] },
+      ]},
+      { vyer: [                                                                          // 6. Väggramar — långväggar
+        { namn: "Översikt", nya: ["Stomme"], gamla: ["Golvreglar", "Golv"] },
+      ]},
+      { vyer: [                                                                          // 7. Väggramar — gavlar
+        { namn: "Översikt", nya: ["Stomme"], gamla: ["Golvreglar", "Golv"] },
+      ]},
+      { vyer: [                                                                          // 8. Res väggarna
+        { namn: "Översikt", nya: ["Stomme"], gamla: ["Golvreglar", "Golv"] },
+      ]},
+      { vyer: [                                                                          // 9. Nockbräda + takstolar
+        { namn: "Översikt", nya: ["Tak"], gamla: ["Golvreglar", "Golv", "Stomme"] },
+      ]},
+      { vyer: [                                                                          // 10. Takunderlag
+        { namn: "Översikt", nya: ["Tak"], gamla: ["Golvreglar", "Golv", "Stomme"] },
+      ]},
+      { vyer: [                                                                          // 11. Taktäckning
+        { namn: "Översikt", nya: ["Tak"], gamla: ["Golvreglar", "Golv", "Stomme"] },
+      ]},
+      { vyer: [                                                                          // 12. Väggpanel
+        { namn: "Översikt", nya: ["Panel"], gamla: ["Golvreglar", "Golv", "Stomme", "Tak"] },
+      ]},
+      { vyer: [                                                                          // 13. Dörr + fönster
+        { namn: "Översikt", nya: ["Dörr", "Fönster"], gamla: ["Golvreglar", "Golv", "Stomme", "Tak", "Panel"] },
+      ]},
+      null,                                                                              // 14. Slutförning
+    ],
     svgar: svgLekstuga,
     inkop: [
       { kategori: "Grund och golv" },
@@ -1005,6 +1043,30 @@ const projekt = {
         }
       }
     ],
+    lagerPerSteg: [
+      null,                                                              // 1. Planering — ingen 3D
+      { vyer: [                                                          // 2. Grundstolpar
+        { namn: "Översikt", nya: ["Stolpar"], gamla: [] },
+      ]},
+      { vyer: [                                                          // 3. Bärlinor + reglar
+        { namn: "Översikt", nya: ["Bärlinor", "Reglar"], gamla: ["Stolpar"] },
+        { namn: "Regelinfästning", nya: ["Reglar"], gamla: ["Stolpar", "Bärlinor"],
+          kamera: { position: [600, 300, 600], target: [0, 200, 0] },
+          bildtext: "Golvreglarna fästs i bärlinorna med regelbeslag eller skruvinfästning" },
+      ]},
+      { vyer: [                                                          // 4. Trallbrädor
+        { namn: "Översikt", nya: ["Trall", "Kantbräda"], gamla: ["Stolpar", "Bärlinor", "Reglar"] },
+        { namn: "Tralldetalj", nya: ["Trall"], gamla: ["Reglar"],
+          kamera: { position: [400, 150, 400], target: [0, 250, 0] },
+          bildtext: "5\u20138 mm mellanrum mellan brädorna, 2 rostfria skruvar per korsning" },
+      ]},
+      { vyer: [                                                          // 5. Räcke
+        { namn: "Översikt", nya: ["Räcke"], gamla: ["Stolpar", "Bärlinor", "Reglar", "Trall", "Kantbräda"] },
+      ]},
+      { vyer: [                                                          // 6. Trappa
+        { namn: "Översikt", nya: ["Trappa"], gamla: ["Stolpar", "Bärlinor", "Reglar", "Trall", "Kantbräda", "Räcke"] },
+      ]},
+    ],
     svgar: svgAltan,
     inkop: [
       { kategori: "Grund" },
@@ -1058,7 +1120,8 @@ const projekt = {
       galleri: [
         { bild: 'assets/altan-1.jpg' },
         { bild: 'assets/altan-2.jpg' },
-        { gradient: 'linear-gradient(135deg, #f0e6d3, #b8956a)', text: 'Foto kommer snart' }
+        { bild: 'assets/altan-3.jpg' },
+        { bild: 'assets/altan-4.jpg' }
       ],
       budskap: 'En egen altan förvandlar trädgården till ett extra rum. Det här är ett projekt som de flesta klarar på en helg — och du kommer använda resultatet varje sommar.',
       kostnadRange: '8 000 – 20 000 kr',
@@ -1130,6 +1193,19 @@ const projekt = {
           ];
         }
       }
+    ],
+    lagerPerSteg: [
+      null,                                                                              // 1. Markera + gräv
+      { vyer: [                                                                          // 2. Stolpar
+        { namn: "Översikt", nya: ["Stolpar"], gamla: [] },
+      ]},
+      { vyer: [                                                                          // 3. Bärbalkar
+        { namn: "Översikt", nya: ["Bärbalkar"], gamla: ["Stolpar"] },
+      ]},
+      { vyer: [                                                                          // 4. Spjälor
+        { namn: "Översikt", nya: ["Spjälor"], gamla: ["Stolpar", "Bärbalkar"] },
+      ]},
+      null,                                                                              // 5. Ytbehandla
     ],
     verktyg: {
       maste: [

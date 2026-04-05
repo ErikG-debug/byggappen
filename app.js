@@ -110,19 +110,28 @@ function uppdateraLagerPanel(projektTyp) {
   var panel = document.getElementById('lager-panel');
   if (!panel) return;
 
-  var regler = ByggRegler.hamta(projektTyp);
-  var defs = (regler && regler.lager) || [];
+  // Använd lagernamn från CAD-servern om tillgängliga
+  var lagerNamn = cadLagerData ? cadLagerData.lager : [];
 
-  // Se till att alla lager for denna projekttyp har ett varde
-  for (var i = 0; i < defs.length; i++) {
-    if (lager[defs[i].nyckel] === undefined) lager[defs[i].nyckel] = true;
+  // Fallback till regler.js-definitioner om CAD-server ej svarat
+  if (lagerNamn.length === 0) {
+    var regler = ByggRegler.hamta(projektTyp);
+    var defs = (regler && regler.lager) || [];
+    for (var i = 0; i < defs.length; i++) {
+      lagerNamn.push(defs[i].etikett);
+    }
+  }
+
+  // Se till att alla lager har ett synlighetsvärde
+  for (var i = 0; i < lagerNamn.length; i++) {
+    if (lager[lagerNamn[i]] === undefined) lager[lagerNamn[i]] = true;
   }
 
   var html = '<span class="lager-rubrik">Visa:</span>';
-  for (var j = 0; j < defs.length; j++) {
-    var d = defs[j];
-    var av = lager[d.nyckel] === false ? ' lager-av' : '';
-    html += '<button class="lager-knapp' + av + '" id="lager-' + d.nyckel + '" onclick="toggleLager(\'' + d.nyckel + '\')">' + d.etikett + '</button>';
+  for (var j = 0; j < lagerNamn.length; j++) {
+    var namn = lagerNamn[j];
+    var av = lager[namn] === false ? ' lager-av' : '';
+    html += '<button class="lager-knapp' + av + '" id="lager-' + namn + '" onclick="toggleLager(\'' + namn + '\')">' + namn + '</button>';
   }
   panel.innerHTML = html;
 }
@@ -308,6 +317,8 @@ function uppdateraDimensioner() {
   }
 
   synkaDesign();
+  cad3dLaddad = ''; // Tvinga ny CAD-laddning vid dimensionsändring
+  cadLagerData = null;
   uppdateraPreview();
   renderRitvy();
   uppdateraDimTip(aktuellaB, aktuellaL);
@@ -317,6 +328,10 @@ function uppdateraDimensioner() {
   if (p) {
     renderInkopslista(p, aktuellaB, aktuellaL);
     if (oppetSteg !== -1) renderInstruktioner(p);
+    // Uppdatera CAD-data för instruktionsbilder vid dimensionsändring
+    if (p.lagerPerSteg && window.CadViewer) {
+      forladdaCad3D(valtProjekt);
+    }
   }
 }
 
@@ -327,28 +342,38 @@ function uppdateraDimensioner() {
 let ritvyOpen  = false;
 let ritvyStyle = 'cad-iso';
 let aktuellaH  = 0.6;
+// Äldre vy-state (behålls för SVG-preview)
 let rotAz      = Math.PI / 5;
 let rotEl      = Math.PI / 4;
 let zoomLevel  = 1.0;
 let panX       = 0;
 let panY       = 0;
-let dragActive = false, dragMode = 'rotate', dragX0, dragY0, dragAz0, dragEl0, dragPanX0, dragPanY0;
 
-// Synlighetslager for 3D-ritning
-const lager = {
-  trall:   true,
-  reglar:  true,
-  stolpar: true,
-  racke:   true,
-  husvagg: true,
-  matt:    true
-};
+// Synlighetslager — fylls dynamiskt av CAD-serverns lagernamn
+var lager = {};
 
 function toggleLager(namn) {
   lager[namn] = !lager[namn];
-  const btn = document.getElementById('lager-' + namn);
+  var btn = document.getElementById('lager-' + namn);
   if (btn) btn.classList.toggle('lager-av', !lager[namn]);
-  renderRitvy();
+
+  var synlig = lager[namn] !== false;
+
+  // Uppdatera Three.js mesh-visibility (3D-vy)
+  if (window.CadViewer) {
+    CadViewer.setLayerVisible(namn, synlig);
+  }
+
+  // Uppdatera SVG DOM visibility (2D-vyer)
+  var container = document.getElementById('cad-svg-container');
+  if (container) {
+    // CSS-klass matchar: lager-Stolpar, lager-Barlinor, etc.
+    var cssNamn = namn.replace(/ä/g, 'a').replace(/ö/g, 'o');
+    var groups = container.querySelectorAll('g.lager-' + cssNamn);
+    groups.forEach(function(g) {
+      g.style.display = synlig ? '' : 'none';
+    });
+  }
 }
 
 function oppnaRitvy() {
@@ -359,7 +384,6 @@ function oppnaRitvy() {
     byggRitvyKontroller(valtProjekt);
     uppdateraLagerPanel(valtProjekt);
     renderRitvy();
-    initRitvyDrag();
   }
 }
 
@@ -464,6 +488,7 @@ function uppdateraHojd() {
     }
   }
   synkaDesign();
+  cad3dLaddad = '';
   renderRitvy();
   uppdateraRackeInfo(aktuellaH);
   uppdateraKostnadDisplay();
@@ -474,8 +499,9 @@ function bytRitvyStyle(stil) {
   document.querySelectorAll('.stil-knapp').forEach(k => k.classList.remove('aktiv-stil'));
   var btn = document.getElementById('stil-' + stil);
   if (btn) btn.classList.add('aktiv-stil');
-  const lp = document.getElementById('lager-panel');
-  if (lp) lp.style.display = stil === 'plan' || stil.startsWith('cad-') ? 'none' : 'flex';
+  var lp = document.getElementById('lager-panel');
+  // Visa lagerpanelen i alla CAD-vyer
+  if (lp) lp.style.display = 'flex';
   renderRitvy();
 }
 
@@ -486,16 +512,10 @@ function aterStallVy() {
 
 function renderRitvy() {
   if (!ritvyOpen) return;
-  const glCanvas = document.getElementById('ritvy-gl');
-  const overlay = document.getElementById('ritvy-overlay');
-  const planSvg = document.getElementById('ritvy-svg');
-  const cadSvgContainer = document.getElementById('cad-svg-container');
-  const cad3dContainer = document.getElementById('cad-3d-container');
+  var cadSvgContainer = document.getElementById('cad-svg-container');
+  var cad3dContainer = document.getElementById('cad-3d-container');
 
-  // Dölj allt först
-  if (glCanvas) glCanvas.style.display = 'none';
-  if (overlay) overlay.style.display = 'none';
-  if (planSvg) { planSvg.classList.add('dold'); planSvg.style.display = 'none'; }
+  // Dölj CAD-containrar
   if (cadSvgContainer) { cadSvgContainer.classList.add('dold'); cadSvgContainer.style.display = 'none'; }
   if (cad3dContainer) { cad3dContainer.classList.add('dold'); cad3dContainer.style.display = 'none'; }
 
@@ -515,25 +535,79 @@ function renderRitvy() {
     hamtaCadSvg(ritvyStyle.replace('cad-', ''));
   }
 
-  const canvasEl = document.querySelector('.ritvy-canvas');
-  if (canvasEl) canvasEl.style.cursor = ritvyStyle === 'cad-iso' ? 'grab' : 'default';
 }
 
-// 3D-modell via Three.js
+// 3D-modell via Three.js — per-lager STL
 var cad3dLaddad = '';
+var cadLagerData = null; // Sparar server-response för lagerpanelen
 
 function laddaCad3D() {
   if (!valtProjekt || !window.CadViewer) return;
 
-  var url = cadServerUrl + '/cad/' + valtProjekt + '/3d?bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
   var key = valtProjekt + '_' + aktuellaB + '_' + aktuellaL + '_' + aktuellaH;
 
   CadViewer.init('cad-3d-container');
 
   if (cad3dLaddad !== key) {
     cad3dLaddad = key;
-    CadViewer.load(url);
+
+    var url = cadServerUrl + '/cad/' + valtProjekt + '/3d?bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
+
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        cadLagerData = data;
+        CadViewer.loadLayers(data);
+        uppdateraLagerPanel(valtProjekt);
+        // Applicera aktuell visibility-state
+        for (var namn in lager) {
+          CadViewer.setLayerVisible(namn, lager[namn] !== false);
+        }
+      })
+      .catch(function(err) {
+        console.error('CAD 3D fetch error:', err);
+      });
   }
+}
+
+// Offscreen-container för CAD-rendering (alltid synlig med storlek, men utanför viewport)
+var cadOffscreenId = 'cad-offscreen-renderer';
+
+function getCadOffscreen() {
+  var el = document.getElementById(cadOffscreenId);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = cadOffscreenId;
+    el.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:600px;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+// Förladda CAD 3D-data i bakgrunden (för instruktionsbilder)
+function forladdaCad3D(projektId) {
+  if (!window.CadViewer) return;
+  var key = projektId + '_' + aktuellaB + '_' + aktuellaL + '_' + aktuellaH;
+  if (cad3dLaddad === key) return; // Redan laddad
+
+  var url = cadServerUrl + '/cad/' + projektId + '/3d?bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      cadLagerData = data;
+      getCadOffscreen();
+      CadViewer.init(cadOffscreenId);
+      CadViewer.loadLayers(data);
+      cad3dLaddad = key;
+      // Om instruktionsvyn är öppen, re-rendera med CAD-bilder
+      if (oppetSteg !== -1 && valtProjekt) {
+        renderInstruktioner(projekt[valtProjekt]);
+      }
+    })
+    .catch(function(err) {
+      console.warn('Förladdning av CAD 3D misslyckades:', err);
+    });
 }
 
 // CAD-server integration
@@ -560,12 +634,24 @@ function hamtaCadSvg(vy) {
       if (data.svgs && data.svgs[vy]) {
         cadCache[cacheKey] = data.svgs[vy];
         container.innerHTML = data.svgs[vy];
-        // Skala SVG:en att fylla containern
         var svg = container.querySelector('svg');
         if (svg) {
           svg.style.width = '100%';
           svg.style.height = 'auto';
-          svg.style.maxHeight = '600px';
+          svg.style.maxHeight = '800px';
+        }
+        // Initiera lagerpanelen från SVG-responsen
+        if (data.lager && !cadLagerData) {
+          cadLagerData = { lager: data.lager };
+          uppdateraLagerPanel(valtProjekt);
+        }
+        // Applicera aktiv visibility-state på SVG
+        for (var namn in lager) {
+          if (lager[namn] === false) {
+            var cssNamn = namn.replace(/ä/g, 'a').replace(/ö/g, 'o');
+            var groups = container.querySelectorAll('g.lager-' + cssNamn);
+            groups.forEach(function(g) { g.style.display = 'none'; });
+          }
         }
       } else {
         container.innerHTML = '<p style="color:red">Kunde inte ladda ritning</p>';
@@ -576,311 +662,8 @@ function hamtaCadSvg(vy) {
     });
 }
 
-function initRitvyDrag() {
-  const canvas = document.querySelector('.ritvy-canvas');
-  if (!canvas || canvas.dataset.dragInit) return;
-  canvas.dataset.dragInit = '1';
-
-  const down = (e) => {
-    if (ritvyStyle === 'plan') return;
-    dragActive = true;
-    const t = e.touches?.[0] ?? e;
-    dragX0 = t.clientX; dragY0 = t.clientY;
-    // Shift+klick, mittenknapp eller tva fingrar → panorera
-    const isPan = e.shiftKey || e.button === 1 || (e.touches && e.touches.length >= 2);
-    dragMode = isPan ? 'pan' : 'rotate';
-    dragAz0 = rotAz;    dragEl0 = rotEl;
-    dragPanX0 = panX;   dragPanY0 = panY;
-    canvas.style.cursor = isPan ? 'move' : 'grabbing';
-    e.preventDefault();
-  };
-  const move = (e) => {
-    if (!dragActive) return;
-    const t = e.touches?.[0] ?? e;
-    const dx = t.clientX - dragX0, dy = t.clientY - dragY0;
-    if (dragMode === 'pan') {
-      // Skala CSS-pixlar till virtuella koordinater (600x420)
-      const cssW = canvas.clientWidth || 600;
-      const scale = 600 / cssW;
-      panX = dragPanX0 + dx * scale;
-      panY = dragPanY0 + dy * scale;
-    } else {
-      rotAz = dragAz0 - dx * 0.013;
-      rotEl = Math.max(-1.0, Math.min(1.3, dragEl0 + dy * 0.008));
-    }
-    renderRitvy();
-    e.preventDefault();
-  };
-  const up = () => {
-    dragActive = false;
-    canvas.style.cursor = ritvyStyle === 'plan' ? 'default' : 'grab';
-  };
-
-  const wheel = (e) => {
-    if (ritvyStyle === 'plan') return;
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.08 : 0.08;
-    zoomLevel = Math.max(0.3, Math.min(8.0, zoomLevel + delta));
-    renderRitvy();
-  };
-
-  canvas.addEventListener('mousedown',  down, { passive: false });
-  canvas.addEventListener('touchstart', down, { passive: false });
-  canvas.addEventListener('wheel',      wheel, { passive: false });
-  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-  window.addEventListener('mousemove',  move, { passive: false });
-  window.addEventListener('touchmove',  move, { passive: false });
-  window.addEventListener('mouseup',    up);
-  window.addEventListener('touchend',   up);
-}
-
-// ----------------------------------------------------------------
-// RITA3D WebGL — Ny 3D-rendering med z-buffer
-// ----------------------------------------------------------------
-let _glInitialized = false;
-
-function rita3DWebGL(b, l, h, style) {
-  const vW = 600, vH = 420;
-  const palette = PALETTER[style];
-  const glCanvas = document.getElementById('ritvy-gl');
-  const overlayEl = document.getElementById('ritvy-overlay');
-  if (!glCanvas || !overlayEl) return;
-
-  // Hantera devicePixelRatio
-  const dpr = window.devicePixelRatio || 1;
-  if (glCanvas.width !== vW * dpr || glCanvas.height !== vH * dpr) {
-    glCanvas.width = vW * dpr;
-    glCanvas.height = vH * dpr;
-  }
-
-  // Initiera WebGL vid behov, eller återinitiera om kontext förlorad
-  if (!_glInitialized || (Render3D._glState && Render3D._glState.gl.isContextLost())) {
-    _glInitialized = false;
-    Render3D._glState = null;
-    if (!Render3D.initGL(glCanvas)) {
-      // Fallback: rendera via SVG (gammal pipeline)
-      overlayEl.setAttribute('viewBox', `0 0 ${vW} ${vH}`);
-      overlayEl.innerHTML = rita3D(b, l, h, style);
-      return;
-    }
-    _glInitialized = true;
-  }
-  const gl = Render3D._glState.gl;
-
-  // Beräkna kontext-dimensioner
-  var ctxB = b, ctxL = l, ctxH = h;
-  if (aktuelltDesign && aktuelltDesign.sektioner.length > 1) {
-    var bnds3d = DesignModell.bounds(aktuelltDesign);
-    ctxB = bnds3d.b;
-    ctxL = bnds3d.l;
-  }
-  if (aktuelltBerakning && aktuelltDesign) {
-    var sek0 = aktuelltDesign.sektioner[0];
-    var ber0 = aktuelltBerakning.perSektion[sek0.id];
-    if (ber0 && ber0.nockHojd) ctxH = ber0.nockHojd;
-  }
-
-  const ctx = Render3D.skapaKontext(ctxB, ctxL, ctxH, rotAz, rotEl, zoomLevel, vW, vH, panX, panY);
-
-  // Börja frame
-  const clearColor = style === 'realistisk' ? [0.29, 0.62, 0.78, 1] : [1, 1, 1, 1];
-  Render3D.beginFrame(gl, vW, vH, clearColor);
-
-  // Bakgrundsgeometri
-  const bgFaces = [];
-  const bgLines = [];
-  const bgTransparent = [];
-
-  if (style === 'realistisk') {
-    // Himmelgradient som två trianglar (top=mörkare, botten=ljusare)
-    // Redan clearad med himmelsfärg, lägg till mark
-    const gE = 12;
-    bgFaces.push({ verts: [[-gE,-gE,0],[ctxB+gE,-gE,0],[ctxB+gE,ctxL+gE,0],[-gE,ctxL+gE,0]], fill: palette.mark.fill, stroke: 'none', sw: 0 });
-
-    // Grid-linjer
-    for (let gx = -gE; gx <= ctxB+gE; gx += 1.5) {
-      bgLines.push({ type: 'line', p1: [gx,-gE,0], p2: [gx,ctxL+gE,0], color: palette.mark.stroke, sw: 0.3 });
-    }
-
-    // Skugga (transparent)
-    bgTransparent.push({ verts: [[-0.5,-0.5,-0.001],[ctxB+0.5,-0.5,-0.001],[ctxB+0.5,ctxL+0.5,-0.001],[-0.5,ctxL+0.5,-0.001]], fill: '#000000', alpha: 0.18, stroke: 'none', sw: 0 });
-
-  } else {
-    // Teknisk: mark-polygon med streckad kant → overlay
-    const gE = 3;
-    bgFaces.push({ verts: [[-gE,-gE,0],[ctxB+gE,-gE,0],[ctxB+gE,ctxL+gE,0],[-gE,ctxL+gE,0]], fill: palette.mark.fill, stroke: 'none', sw: 0 });
-  }
-
-  // Hämta deklarativ modell och bygg geometri
-  const p = projekt[valtProjekt];
-  let modell = { faces: [], lines: [], overlay: [], transparent: [] };
-  if (p && p.bygg3d) {
-    var delar;
-    if (aktuelltDesign && aktuelltBerakning) {
-      delar = ByggGenerator.delar(aktuelltDesign, aktuelltBerakning);
-    } else {
-      delar = p.bygg3d(b, l, h);
-    }
-    modell = byggModellGL(delar, ctx, palette, style);
-  }
-
-  // Slå ihop bakgrund + modell
-  const allFaces = bgFaces.concat(modell.faces);
-  const allLines = bgLines.concat(modell.lines);
-  const allTransparent = bgTransparent.concat(modell.transparent);
-
-  // Rita allt via WebGL med gemensam djupnormalisering
-  Render3D.renderScene(gl, ctx, allFaces, allLines, allTransparent, vW, vH);
-
-  // Bygg SVG-overlay (text, mått, streckade linjer)
-  overlayEl.setAttribute('viewBox', `0 0 ${vW} ${vH}`);
-  let ov = '';
-
-  // Streckade konturer från teknisk husvägg
-  if (style === 'teknisk') {
-    // Teknisk mark-kontur (streckad)
-    const gE = 3;
-    ov += Render3D.poly([[-gE,-gE,0],[ctxB+gE,-gE,0],[ctxB+gE,ctxL+gE,0],[-gE,ctxL+gE,0]].map(v => ctx.pt(...v)), 'none', palette.mark.stroke, 0.5, '4,3');
-    ov += Render3D.poly([[0,0,0],[ctxB,0,0],[ctxB,ctxL,0],[0,ctxL,0]].map(v => ctx.pt(...v)), 'none', '#ccc', 0.5, '4,3');
-  }
-
-  // Overlay-element från modell
-  for (const item of modell.overlay) {
-    if (item.type === 'text') {
-      const [tx, ty] = ctx.proj(item.pos[0], item.pos[1], item.pos[2]);
-      ov += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${item.anchor || 'middle'}" font-size="${item.size || 10}" fill="${item.fill || '#999'}" font-family="Arial">${item.text}</text>`;
-    } else if (item.type === 'dashedPoly') {
-      ov += Render3D.poly(item.verts.map(v => ctx.pt(...v)), 'none', item.stroke, item.sw, item.dash);
-    }
-  }
-
-  // Mått
-  if (lager.matt) {
-    const [blx, bly] = ctx.proj(ctxB/2, ctxL, h);
-    const mattFarg = style === 'realistisk' ? '#222' : '#111';
-    ov += `<text x="${blx.toFixed(3)}" y="${(bly+20).toFixed(3)}" text-anchor="middle" font-size="13" fill="${mattFarg}" font-family="Arial" font-weight="bold">${ctxB} m</text>`;
-    const [dlx, dly] = ctx.proj(ctxB, ctxL/2, h);
-    ov += `<text x="${(dlx+13).toFixed(3)}" y="${(dly+4).toFixed(3)}" font-size="13" fill="${mattFarg}" font-family="Arial" font-weight="bold">${ctxL} m</text>`;
-
-    const [hx1, hy1] = ctx.proj(ctxB, ctxL, 0), [, hy2] = ctx.proj(ctxB, ctxL, h);
-    if (style === 'teknisk') {
-      ov += `<line x1="${(hx1+10).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+10).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      ov += `<line x1="${(hx1+6).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+14).toFixed(3)}" y2="${hy1.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      ov += `<line x1="${(hx1+6).toFixed(3)}" y1="${hy2.toFixed(3)}" x2="${(hx1+14).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      ov += `<text x="${(hx1+18).toFixed(3)}" y="${((hy1+hy2)/2+4).toFixed(3)}" font-size="11" fill="#333" font-family="Arial">${Math.round(h*100)} cm</text>`;
-    } else {
-      ov += `<line x1="${(hx1+10).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+10).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>`;
-      ov += `<text x="${(hx1+16).toFixed(3)}" y="${((hy1+hy2)/2+4).toFixed(3)}" font-size="11" fill="#444" font-family="Arial">${Math.round(h*100)} cm</text>`;
-    }
-  }
-
-  // Titelrad
-  var projektNamn = (p ? p.namn : valtProjekt).toUpperCase();
-  if (style === 'teknisk') {
-    ov += `<text x="${vW/2}" y="${vH-10}" text-anchor="middle" font-size="10" fill="#999" font-family="Arial">TEKNISK 3D — ${projektNamn} ${ctxB} × ${ctxL} m  |  Höjd ${Math.round(h*100)} cm</text>`;
-  }
-  ov += `<text x="${vW/2}" y="${vH - (style === 'teknisk' ? 24 : 8)}" text-anchor="middle" font-size="10" fill="rgba(0,0,0,0.3)" font-family="Arial">Dra = rotera · Shift+dra = panorera · Scroll = zooma</text>`;
-
-  overlayEl.innerHTML = ov;
-}
 
 
-// ----------------------------------------------------------------
-// RITA3D — Legacy SVG-rendering (för preview)
-// ----------------------------------------------------------------
-function rita3D(b, l, h, style) {
-  const vW = 600, vH = 420;
-  const palette = PALETTER[style];
-  var ctxB = b, ctxL = l, ctxH = h;
-  if (aktuelltDesign && aktuelltDesign.sektioner.length > 1) {
-    var bnds3d = DesignModell.bounds(aktuelltDesign);
-    ctxB = bnds3d.b;
-    ctxL = bnds3d.l;
-  }
-
-  // For lekstuga: inkludera nockhojd i kontexthojden
-  var regler = ByggRegler.hamta(valtProjekt);
-  if (aktuelltBerakning && aktuelltDesign) {
-    var sek0 = aktuelltDesign.sektioner[0];
-    var ber0 = aktuelltBerakning.perSektion[sek0.id];
-    if (ber0 && ber0.nockHojd) {
-      ctxH = ber0.nockHojd;
-    }
-  }
-
-  const ctx = Render3D.skapaKontext(ctxB, ctxL, ctxH, rotAz, rotEl, zoomLevel, vW, vH, panX, panY);
-
-  let o = '';
-
-  if (style === 'realistisk') {
-    o += `<defs>
-      <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#4a9fc8"/><stop offset="100%" stop-color="#c0e4f5"/>
-      </linearGradient>
-    </defs>`;
-    o += `<rect width="${vW}" height="${vH}" fill="url(#gSky)"/>`;
-
-    const gE = 12;
-    const gPts = [ctx.pt(-gE, -gE, 0), ctx.pt(ctxB+gE, -gE, 0), ctx.pt(ctxB+gE, ctxL+gE, 0), ctx.pt(-gE, ctxL+gE, 0)];
-    o += `<polygon points="${gPts.join(' ')}" fill="${palette.mark.fill}" stroke="none"/>`;
-
-    for (let gx = -gE; gx <= ctxB+gE; gx += 1.5) {
-      const [ax, ay] = ctx.proj(gx, -gE, 0), [bx2, by2] = ctx.proj(gx, ctxL+gE, 0);
-      o += `<line x1="${ax.toFixed(3)}" y1="${ay.toFixed(3)}" x2="${bx2.toFixed(3)}" y2="${by2.toFixed(3)}" stroke="${palette.mark.stroke}" stroke-width="0.3" opacity="0.4"/>`;
-    }
-
-    const [scx, scy] = ctx.proj(ctxB/2, ctxL/2, 0);
-    o += `<ellipse cx="${scx.toFixed(3)}" cy="${(scy + h*ctx.s*0.05).toFixed(3)}" rx="${((ctxB+ctxL)*ctx.s*0.28).toFixed(3)}" ry="${((ctxB+ctxL)*ctx.s*0.055).toFixed(3)}" fill="rgba(0,0,0,0.18)"/>`;
-  } else {
-    o += `<rect width="${vW}" height="${vH}" fill="white"/>`;
-    const gE = 3;
-    o += Render3D.poly([[-gE,-gE,0],[ctxB+gE,-gE,0],[ctxB+gE,ctxL+gE,0],[-gE,ctxL+gE,0]].map(v => ctx.pt(...v)), palette.mark.fill, palette.mark.stroke, 0.5, '4,3');
-    o += Render3D.poly([[0,0,0],[ctxB,0,0],[ctxB,ctxL,0],[0,ctxL,0]].map(v => ctx.pt(...v)), 'none', '#ccc', 0.5, '4,3');
-  }
-
-  // Hamta deklarativ modell och bygg SVG
-  const p = projekt[valtProjekt];
-  if (p && p.bygg3d) {
-    var delar;
-    if (aktuelltDesign && aktuelltDesign.sektioner.length > 1 && aktuelltBerakning) {
-      delar = ByggGenerator.delar(aktuelltDesign, aktuelltBerakning);
-    } else if (aktuelltDesign && aktuelltBerakning) {
-      delar = ByggGenerator.delar(aktuelltDesign, aktuelltBerakning);
-    } else {
-      delar = p.bygg3d(b, l, h);
-    }
-    o += byggModell(delar, ctx, palette, style);
-  }
-
-  // Matt
-  if (lager.matt) {
-    const [blx, bly] = ctx.proj(ctxB/2, ctxL, h);
-    const mattFarg = style === 'realistisk' ? '#222' : '#111';
-    o += `<text x="${blx.toFixed(3)}" y="${(bly+20).toFixed(3)}" text-anchor="middle" font-size="13" fill="${mattFarg}" font-family="Arial" font-weight="bold">${ctxB} m</text>`;
-    const [dlx, dly] = ctx.proj(ctxB, ctxL/2, h);
-    o += `<text x="${(dlx+13).toFixed(3)}" y="${(dly+4).toFixed(3)}" font-size="13" fill="${mattFarg}" font-family="Arial" font-weight="bold">${ctxL} m</text>`;
-
-    const [hx1, hy1] = ctx.proj(ctxB, ctxL, 0), [, hy2] = ctx.proj(ctxB, ctxL, h);
-    if (style === 'teknisk') {
-      o += `<line x1="${(hx1+10).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+10).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${(hx1+6).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+14).toFixed(3)}" y2="${hy1.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${(hx1+6).toFixed(3)}" y1="${hy2.toFixed(3)}" x2="${(hx1+14).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#333" stroke-width="1"/>`;
-      o += `<text x="${(hx1+18).toFixed(3)}" y="${((hy1+hy2)/2+4).toFixed(3)}" font-size="11" fill="#333" font-family="Arial">${Math.round(h*100)} cm</text>`;
-    } else {
-      o += `<line x1="${(hx1+10).toFixed(3)}" y1="${hy1.toFixed(3)}" x2="${(hx1+10).toFixed(3)}" y2="${hy2.toFixed(3)}" stroke="#555" stroke-width="1" stroke-dasharray="3,2"/>`;
-      o += `<text x="${(hx1+16).toFixed(3)}" y="${((hy1+hy2)/2+4).toFixed(3)}" font-size="11" fill="#444" font-family="Arial">${Math.round(h*100)} cm</text>`;
-    }
-  }
-
-  // Titelrad — generisk
-  var projektNamn = (p ? p.namn : valtProjekt).toUpperCase();
-  if (style === 'teknisk') {
-    o += `<text x="${vW/2}" y="${vH-10}" text-anchor="middle" font-size="10" fill="#999" font-family="Arial">TEKNISK 3D \u2014 ${projektNamn} ${ctxB} \u00d7 ${ctxL} m  |  H\u00f6jd ${Math.round(h*100)} cm</text>`;
-  }
-  o += `<text x="${vW/2}" y="${vH - (style === 'teknisk' ? 24 : 8)}" text-anchor="middle" font-size="10" fill="rgba(0,0,0,0.3)" font-family="Arial">Dra = rotera \u00b7 Shift+dra = panorera \u00b7 Scroll = zooma</text>`;
-
-  return o;
-}
 
 // ----------------------------------------------------------------
 // 3D PREVIEW — Fotorealistisk vy utan matt/titlar
@@ -972,345 +755,6 @@ function rita3DPreview(b, l, h, vW, vH) {
   return o;
 }
 
-// ----------------------------------------------------------------
-// PLANRITNING
-// ----------------------------------------------------------------
-function planRitning(b, l, h) {
-  if (aktuelltDesign && aktuelltDesign.sektioner.length > 1) {
-    var valdId = Editor.valdSektionId();
-    var valdSek = aktuelltDesign.sektioner.find(function (s) { return s.id === valdId; });
-    if (valdSek) {
-      b = valdSek.b;
-      l = valdSek.l;
-      h = valdSek.egenskaper.h || h;
-    }
-  }
-
-  const vW = 840, vH = 680;
-  const rH = h > 0.5 ? 0.9 : 0;
-  const totalH = h + rH;
-  const bP = stolpArr(b), lP = stolpArr(l);
-  const ps = 6;
-
-  const planW = 420, planH = 280;
-  const elevW = 420, elevH = 180;
-  const sideW = 280, sideH = 280;
-
-  const sc = Math.min(
-    (planW - 80) / b, (planH - 60) / l,
-    (elevW - 80) / b, (elevH - 60) / totalH,
-    (sideW - 80) / l, (sideH - 60) / totalH
-  );
-
-  let o = `<rect width="${vW}" height="${vH}" fill="white"/>`;
-
-  function dimH(x0, x1, y, label) {
-    let d = '';
-    d += `<line x1="${x0.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<line x1="${x0.toFixed(1)}" y1="${(y-4).toFixed(1)}" x2="${x0.toFixed(1)}" y2="${(y+4).toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<line x1="${x1.toFixed(1)}" y1="${(y-4).toFixed(1)}" x2="${x1.toFixed(1)}" y2="${(y+4).toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<text x="${((x0+x1)/2).toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-size="10" fill="#111" font-family="Arial">${label}</text>`;
-    return d;
-  }
-  function dimV(x, y0, y1, label) {
-    let d = '';
-    d += `<line x1="${x.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<line x1="${(x-4).toFixed(1)}" y1="${y0.toFixed(1)}" x2="${(x+4).toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<line x1="${(x-4).toFixed(1)}" y1="${y1.toFixed(1)}" x2="${(x+4).toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    d += `<text x="${(x-6).toFixed(1)}" y="${((y0+y1)/2+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#111" font-family="Arial" transform="rotate(-90,${(x-6).toFixed(1)},${((y0+y1)/2+3).toFixed(1)})">${label}</text>`;
-    return d;
-  }
-  function sectionLabel(x, y, label) {
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="12" fill="#333" font-family="Arial" font-weight="bold">${label}</text>`;
-  }
-
-  const divX = 470;
-  const divY = 370;
-  o += `<line x1="${divX}" y1="0" x2="${divX}" y2="${divY}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="4,3"/>`;
-  o += `<line x1="0" y1="${divY}" x2="${vW}" y2="${divY}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="4,3"/>`;
-  o += `<line x1="${divX}" y1="${divY}" x2="${divX}" y2="${vH-50}" stroke="#bbb" stroke-width="0.5" stroke-dasharray="4,3"/>`;
-
-  // 1. PLANVY
-  {
-    var sektioner = aktuelltDesign ? aktuelltDesign.sektioner : [{ x: 0, y: 0, b: b, l: l, id: '_', egenskaper: { h: h } }];
-    var bnds = aktuelltDesign ? DesignModell.bounds(aktuelltDesign) : { x: 0, y: 0, b: b, l: l };
-    var planB = bnds.b, planL = bnds.l;
-
-    var planAvailW = planW - 80, planAvailH = planH - 60;
-    var planSc = Math.min(planAvailW / planB, planAvailH / planL, sc);
-    var ox = 70 + (planAvailW - planB * planSc) / 2 - bnds.x * planSc;
-    var oy = 45 + (planAvailH - planL * planSc) / 2 - bnds.y * planSc;
-
-    var psc = planSc;
-    var planCenterX = ox + bnds.x * psc + planB * psc / 2;
-    o += sectionLabel(planCenterX, oy + bnds.y * psc - 22, 'PLAN');
-
-    var cutY = oy + bnds.y * psc + planL * psc * 0.5;
-    var cutX0 = ox + bnds.x * psc - 20;
-    var cutX1 = ox + (bnds.x + planB) * psc + 20;
-    o += `<line x1="${cutX0.toFixed(1)}" y1="${cutY.toFixed(1)}" x2="${cutX1.toFixed(1)}" y2="${cutY.toFixed(1)}" stroke="#c00" stroke-width="0.8" stroke-dasharray="8,3,2,3"/>`;
-    o += `<text x="${(cutX0-4).toFixed(1)}" y="${(cutY+4).toFixed(1)}" text-anchor="end" font-size="10" fill="#c00" font-family="Arial" font-weight="bold">A</text>`;
-    o += `<text x="${(cutX1+4).toFixed(1)}" y="${(cutY+4).toFixed(1)}" font-size="10" fill="#c00" font-family="Arial" font-weight="bold">A</text>`;
-
-    for (var si = 0; si < sektioner.length; si++) {
-      var sek = sektioner[si];
-      var sx = ox + sek.x * psc;
-      var sy = oy + sek.y * psc;
-      var dW = sek.b * psc;
-      var dH = sek.l * psc;
-
-      o += `<rect x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" width="${dW.toFixed(1)}" height="${dH.toFixed(1)}" fill="#f9f9f9"/>`;
-
-      var tSp = 0.125 * psc;
-      for (var ty = tSp * 0.5; ty < dH; ty += tSp)
-        o += `<line x1="${(sx+2).toFixed(1)}" y1="${(sy+ty).toFixed(1)}" x2="${(sx+dW-2).toFixed(1)}" y2="${(sy+ty).toFixed(1)}" stroke="#ddd" stroke-width="0.6"/>`;
-
-      o += `<rect x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" width="${dW.toFixed(1)}" height="${dH.toFixed(1)}" fill="none" stroke="#000" stroke-width="2.5"/>`;
-      o += `<rect x="${(sx+4).toFixed(1)}" y="${(sy+4).toFixed(1)}" width="${(dW-8).toFixed(1)}" height="${(dH-8).toFixed(1)}" fill="none" stroke="#555" stroke-width="0.6" stroke-dasharray="3,2"/>`;
-
-      var sekBP = aktuelltBerakning && aktuelltBerakning.perSektion[sek.id]
-        ? aktuelltBerakning.perSektion[sek.id].stolpPosB
-        : stolpArr(sek.b);
-      var sekLP = aktuelltBerakning && aktuelltBerakning.perSektion[sek.id]
-        ? aktuelltBerakning.perSektion[sek.id].stolpPosL
-        : stolpArr(sek.l);
-
-      for (var pi = 0; pi < sekBP.length; pi++) {
-        for (var pj = 0; pj < 2; pj++) {
-          var py2 = pj === 0 ? 0 : sek.l;
-          var spx = sx + sekBP[pi] * psc - ps / 2;
-          var spy = sy + py2 * psc - ps / 2;
-          o += `<rect x="${spx.toFixed(1)}" y="${spy.toFixed(1)}" width="${ps}" height="${ps}" fill="#111"/>`;
-          o += `<rect x="${(spx+1.5).toFixed(1)}" y="${(spy+1.5).toFixed(1)}" width="${ps-3}" height="${ps-3}" fill="none" stroke="white" stroke-width="0.5"/>`;
-        }
-      }
-      for (var pi2 = 0; pi2 < sekLP.length; pi2++) {
-        if (sekLP[pi2] > 0 && sekLP[pi2] < sek.l) {
-          for (var pj2 = 0; pj2 < 2; pj2++) {
-            var px2 = pj2 === 0 ? 0 : sek.b;
-            var spx2 = sx + px2 * psc - ps / 2;
-            var spy2 = sy + sekLP[pi2] * psc - ps / 2;
-            o += `<rect x="${spx2.toFixed(1)}" y="${spy2.toFixed(1)}" width="${ps}" height="${ps}" fill="#111"/>`;
-          }
-        }
-      }
-
-      for (var bi = 0; bi < sekBP.length; bi++) {
-        var lx = sx + sekBP[bi] * psc;
-        o += `<line x1="${lx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(sy+dH).toFixed(1)}" stroke="#888" stroke-width="0.8" stroke-dasharray="4,3"/>`;
-      }
-    }
-
-    // Husmur (om projektreglerna anger husvagg)
-    var regler = ByggRegler.hamta(valtProjekt); if (regler && regler.planExtras && regler.planExtras.husvagg) {
-      var husX0 = ox + bnds.x * psc - 10;
-      var husBW = planB * psc + 20;
-      var husH = 14;
-      var husY0 = oy + bnds.y * psc - husH;
-      o += `<rect x="${husX0.toFixed(1)}" y="${husY0.toFixed(1)}" width="${husBW.toFixed(1)}" height="${husH}" fill="#e8e8e8" stroke="#333" stroke-width="1.2"/>`;
-      for (var hx = -3; hx < husBW; hx += 6)
-        o += `<line x1="${(husX0+hx).toFixed(1)}" y1="${husY0.toFixed(1)}" x2="${(husX0+hx+husH).toFixed(1)}" y2="${(husY0+husH).toFixed(1)}" stroke="#ccc" stroke-width="0.6"/>`;
-      o += `<rect x="${husX0.toFixed(1)}" y="${husY0.toFixed(1)}" width="${husBW.toFixed(1)}" height="${husH}" fill="none" stroke="#333" stroke-width="1.2"/>`;
-      o += `<text x="${(husX0+husBW/2).toFixed(1)}" y="${(husY0+husH-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="#444" font-family="Arial" font-weight="bold">HUS</text>`;
-    }
-
-    var dimOx = ox + bnds.x * psc;
-    var dimOy = oy + bnds.y * psc;
-    o += dimH(dimOx, dimOx + planB * psc, dimOy + planL * psc + 20, `${planB} m`);
-    o += dimV(dimOx - 22, dimOy, dimOy + planL * psc, `${planL} m`);
-
-    if (sektioner.length === 1 && sekBP && sekBP.length > 1) {
-      var cc = (sekBP[1] - sekBP[0]) * 1000;
-      o += dimH(dimOx + sekBP[0]*psc, dimOx + sekBP[1]*psc, dimOy + planL * psc + 36, `c/c ${cc.toFixed(0)} mm`);
-    }
-
-    Editor.setPlanInfo(ox, oy, psc);
-    o += Editor.planHandles();
-  }
-
-  // 2. FRAMSIDA
-  {
-    const ox = 70, oy = divY + 35;
-    const dW = b * sc, dTotalH = totalH * sc;
-    const dH = h * sc;
-    const baseY = oy + dTotalH;
-
-    o += sectionLabel(ox + dW/2, oy - 12, 'FRAMSIDA');
-
-    o += `<line x1="${(ox-15).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+dW+15).toFixed(1)}" y2="${baseY.toFixed(1)}" stroke="#333" stroke-width="1.5"/>`;
-    for (let mx = -15; mx < dW + 15; mx += 8)
-      o += `<line x1="${(ox+mx).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+mx-5).toFixed(1)}" y2="${(baseY+5).toFixed(1)}" stroke="#666" stroke-width="0.6"/>`;
-
-    for (const px of bP) {
-      const sx = ox + px * sc;
-      o += `<rect x="${(sx-3).toFixed(1)}" y="${(baseY-dH).toFixed(1)}" width="6" height="${dH.toFixed(1)}" fill="#ddd" stroke="#333" stroke-width="1"/>`;
-    }
-
-    o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-3).toFixed(1)}" width="${dW.toFixed(1)}" height="6" fill="#ccc" stroke="#333" stroke-width="1"/>`;
-    for (let tx = 5; tx < dW; tx += 0.125 * sc) {
-      o += `<line x1="${(ox+tx).toFixed(1)}" y1="${(baseY-dH-3).toFixed(1)}" x2="${(ox+tx).toFixed(1)}" y2="${(baseY-dH+3).toFixed(1)}" stroke="#999" stroke-width="0.4"/>`;
-    }
-
-    if (rH > 0) {
-      const rHpx = rH * sc;
-      for (const px of bP) {
-        const sx = ox + px * sc;
-        o += `<rect x="${(sx-2).toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="4" height="${rHpx.toFixed(1)}" fill="none" stroke="#333" stroke-width="1"/>`;
-      }
-      o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="${dW.toFixed(1)}" height="4" fill="#ddd" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${ox.toFixed(1)}" y1="${(baseY-dH-rHpx*0.5).toFixed(1)}" x2="${(ox+dW).toFixed(1)}" y2="${(baseY-dH-rHpx*0.5).toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    }
-
-    o += dimH(ox, ox + dW, baseY + 16, `${b} m`);
-    o += dimV(ox - 22, baseY - dH, baseY, `${Math.round(h*100)} cm`);
-    if (rH > 0)
-      o += dimV(ox + dW + 14, baseY - dH - rH*sc, baseY - dH, `${Math.round(rH*100)} cm`);
-  }
-
-  // 3. GAVELSIDA
-  {
-    const ox = divX + 55, oy = 45;
-    const dW = l * sc, dTotalH = totalH * sc;
-    const dH = h * sc;
-    const baseY = oy + dTotalH;
-
-    o += sectionLabel(ox + dW/2, oy - 22, 'GAVELSIDA');
-
-    o += `<line x1="${(ox-15).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+dW+15).toFixed(1)}" y2="${baseY.toFixed(1)}" stroke="#333" stroke-width="1.5"/>`;
-    for (let mx = -15; mx < dW + 15; mx += 8)
-      o += `<line x1="${(ox+mx).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+mx-5).toFixed(1)}" y2="${(baseY+5).toFixed(1)}" stroke="#666" stroke-width="0.6"/>`;
-
-    const wallHpx = Math.min(2.5, h + 1.6) * sc;
-    var regler2 = ByggRegler.hamta(valtProjekt); if (regler2 && regler2.planExtras && regler2.planExtras.husvagg) {
-      o += `<rect x="${(ox-12).toFixed(1)}" y="${(baseY-wallHpx).toFixed(1)}" width="12" height="${wallHpx.toFixed(1)}" fill="#e8e8e8" stroke="#333" stroke-width="1.2"/>`;
-      for (let wy = 0; wy < wallHpx; wy += 8)
-        o += `<line x1="${(ox-12).toFixed(1)}" y1="${(baseY-wy).toFixed(1)}" x2="${ox.toFixed(1)}" y2="${(baseY-wy).toFixed(1)}" stroke="#ccc" stroke-width="0.5"/>`;
-      o += `<text x="${(ox-6).toFixed(1)}" y="${(baseY-wallHpx-4).toFixed(1)}" text-anchor="middle" font-size="7" fill="#666" font-family="Arial">HUS</text>`;
-    }
-
-    for (const py of lP) {
-      const sx = ox + py * sc;
-      o += `<rect x="${(sx-3).toFixed(1)}" y="${(baseY-dH).toFixed(1)}" width="6" height="${dH.toFixed(1)}" fill="#ddd" stroke="#333" stroke-width="1"/>`;
-    }
-
-    o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-3).toFixed(1)}" width="${dW.toFixed(1)}" height="6" fill="#ccc" stroke="#333" stroke-width="1"/>`;
-
-    if (rH > 0) {
-      const rHpx = rH * sc;
-      for (const py of lP) {
-        const sx = ox + py * sc;
-        o += `<rect x="${(sx-2).toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="4" height="${rHpx.toFixed(1)}" fill="none" stroke="#333" stroke-width="1"/>`;
-      }
-      o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="${dW.toFixed(1)}" height="4" fill="#ddd" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${ox.toFixed(1)}" y1="${(baseY-dH-rHpx*0.5).toFixed(1)}" x2="${(ox+dW).toFixed(1)}" y2="${(baseY-dH-rHpx*0.5).toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-    }
-
-    if (h > 0.3) {
-      const nSteps = Math.max(1, Math.round(h / 0.18));
-      const stepH = dH / nSteps;
-      const stepD = 18;
-      for (let si2 = 0; si2 < nSteps; si2++) {
-        const sy2 = baseY - stepH * (si2 + 1);
-        const sx2 = ox + dW + si2 * stepD;
-        o += `<rect x="${sx2.toFixed(1)}" y="${sy2.toFixed(1)}" width="${stepD}" height="${stepH.toFixed(1)}" fill="#eee" stroke="#333" stroke-width="0.8"/>`;
-      }
-    }
-
-    o += dimH(ox, ox + dW, baseY + 16, `${l} m`);
-    o += dimV(ox + dW + (h > 0.3 ? 50 : 14), baseY - dH, baseY, `${Math.round(h*100)} cm`);
-  }
-
-  // 4. SNITT A-A
-  {
-    const ox = divX + 55, oy = divY + 35;
-    const dW = b * sc, dTotalH = totalH * sc;
-    const dH = h * sc;
-    const baseY = oy + dTotalH;
-
-    o += sectionLabel(ox + dW/2, oy - 12, 'SNITT A\u2013A');
-
-    o += `<line x1="${(ox-15).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+dW+15).toFixed(1)}" y2="${baseY.toFixed(1)}" stroke="#333" stroke-width="1.5"/>`;
-    for (let mx = -15; mx < dW + 15; mx += 8)
-      o += `<line x1="${(ox+mx).toFixed(1)}" y1="${baseY.toFixed(1)}" x2="${(ox+mx-5).toFixed(1)}" y2="${(baseY+5).toFixed(1)}" stroke="#666" stroke-width="0.6"/>`;
-
-    for (const px of bP) {
-      const sx = ox + px * sc;
-      o += `<rect x="${(sx-8).toFixed(1)}" y="${baseY.toFixed(1)}" width="16" height="10" fill="#ccc" stroke="#999" stroke-width="0.8"/>`;
-    }
-
-    for (const px of bP) {
-      const sx = ox + px * sc;
-      const sW = 8, sH2 = dH;
-      o += `<rect x="${(sx-sW/2).toFixed(1)}" y="${(baseY-sH2).toFixed(1)}" width="${sW}" height="${sH2.toFixed(1)}" fill="#e0e0e0" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${(sx-sW/2).toFixed(1)}" y1="${(baseY-sH2).toFixed(1)}" x2="${(sx+sW/2).toFixed(1)}" y2="${baseY.toFixed(1)}" stroke="#999" stroke-width="0.5"/>`;
-      o += `<line x1="${(sx+sW/2).toFixed(1)}" y1="${(baseY-sH2).toFixed(1)}" x2="${(sx-sW/2).toFixed(1)}" y2="${baseY.toFixed(1)}" stroke="#999" stroke-width="0.5"/>`;
-    }
-
-    o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-5).toFixed(1)}" width="${dW.toFixed(1)}" height="5" fill="#d0d0d0" stroke="#333" stroke-width="1"/>`;
-    o += `<text x="${(ox+dW/2).toFixed(1)}" y="${(baseY-dH-8).toFixed(1)}" text-anchor="middle" font-size="7" fill="#666" font-family="Arial">45\u00d7195 b\u00e4rlina</text>`;
-
-    o += `<rect x="${ox.toFixed(1)}" y="${(baseY-dH-8).toFixed(1)}" width="${dW.toFixed(1)}" height="3" fill="#bbb" stroke="#333" stroke-width="0.8"/>`;
-    o += `<text x="${(ox+dW+6).toFixed(1)}" y="${(baseY-dH-5).toFixed(1)}" font-size="7" fill="#666" font-family="Arial">28\u00d7120 trall</text>`;
-
-    if (rH > 0) {
-      const rHpx = rH * sc;
-      o += `<rect x="${(ox-2).toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="4" height="${rHpx.toFixed(1)}" fill="none" stroke="#333" stroke-width="1"/>`;
-      o += `<rect x="${(ox+dW-2).toFixed(1)}" y="${(baseY-dH-rHpx).toFixed(1)}" width="4" height="${rHpx.toFixed(1)}" fill="none" stroke="#333" stroke-width="1"/>`;
-      o += `<line x1="${ox.toFixed(1)}" y1="${(baseY-dH-rHpx).toFixed(1)}" x2="${(ox+dW).toFixed(1)}" y2="${(baseY-dH-rHpx).toFixed(1)}" stroke="#333" stroke-width="1.5"/>`;
-      o += `<line x1="${ox.toFixed(1)}" y1="${(baseY-dH-rHpx*0.5).toFixed(1)}" x2="${(ox+dW).toFixed(1)}" y2="${(baseY-dH-rHpx*0.5).toFixed(1)}" stroke="#333" stroke-width="0.8"/>`;
-      o += dimV(ox + dW + 14, baseY - dH - rHpx, baseY - dH, `${Math.round(rH*100)} cm`);
-    }
-
-    o += dimH(ox, ox + dW, baseY + 18, `${b} m`);
-    o += dimV(ox - 20, baseY - dH, baseY, `${Math.round(h*100)} cm`);
-
-    if (bP.length > 1)
-      o += dimH(ox + bP[0]*sc, ox + bP[1]*sc, baseY + 32, `c/c ${((bP[1]-bP[0])*1000).toFixed(0)}`);
-  }
-
-  // TITELRUTA
-  {
-    var projektNamn = projekt[valtProjekt] ? projekt[valtProjekt].namn.toUpperCase() : 'PROJEKT';
-    const tbY = vH - 50, tbH = 50;
-    o += `<rect x="0" y="${tbY}" width="${vW}" height="${tbH}" fill="#f8f8f8" stroke="#333" stroke-width="1"/>`;
-    o += `<line x1="200" y1="${tbY}" x2="200" y2="${vH}" stroke="#333" stroke-width="0.5"/>`;
-    o += `<line x1="440" y1="${tbY}" x2="440" y2="${vH}" stroke="#333" stroke-width="0.5"/>`;
-    o += `<line x1="620" y1="${tbY}" x2="620" y2="${vH}" stroke="#333" stroke-width="0.5"/>`;
-    o += `<line x1="0" y1="${tbY+25}" x2="200" y2="${tbY+25}" stroke="#333" stroke-width="0.5"/>`;
-
-    o += `<text x="10" y="${tbY+16}" font-size="9" fill="#888" font-family="Arial">PROJEKT</text>`;
-    o += `<text x="10" y="${tbY+40}" font-size="12" fill="#111" font-family="Arial" font-weight="bold">${projektNamn} ${b} \u00d7 ${l} m</text>`;
-
-    o += `<text x="210" y="${tbY+16}" font-size="9" fill="#888" font-family="Arial">RITNING</text>`;
-    o += `<text x="210" y="${tbY+34}" font-size="11" fill="#111" font-family="Arial">Konstruktionsritning</text>`;
-
-    o += `<text x="450" y="${tbY+16}" font-size="9" fill="#888" font-family="Arial">SKALA</text>`;
-    o += `<text x="450" y="${tbY+34}" font-size="11" fill="#111" font-family="Arial">1:${Math.round(100/sc)}</text>`;
-
-    o += `<text x="630" y="${tbY+16}" font-size="9" fill="#888" font-family="Arial">INFORMATION</text>`;
-    o += `<text x="630" y="${tbY+34}" font-size="10" fill="#555" font-family="Arial">H\u00f6jd ${Math.round(h*100)} cm | ${rH > 0 ? 'R\u00e4cke ' + Math.round(rH*100) + ' cm' : 'Utan r\u00e4cke'}</text>`;
-
-    const sbM = Math.min(2, Math.round(b/2));
-    const sbPx = sbM * sc, sbX = 450, sbY2 = tbY + 42;
-    o += `<rect x="${sbX}" y="${sbY2}" width="${sbPx.toFixed(1)}" height="4" fill="none" stroke="#666" stroke-width="0.8"/>`;
-    o += `<rect x="${sbX}" y="${sbY2}" width="${(sbPx/2).toFixed(1)}" height="4" fill="#666"/>`;
-    o += `<text x="${sbX}" y="${sbY2-2}" font-size="7" fill="#666" font-family="Arial">0</text>`;
-    o += `<text x="${(sbX+sbPx).toFixed(1)}" y="${sbY2-2}" text-anchor="end" font-size="7" fill="#666" font-family="Arial">${sbM} m</text>`;
-  }
-
-  // Teckenforklaring
-  {
-    const lx = divX + 20, ly = divY - 15;
-    o += `<rect x="${lx}" y="${ly}" width="6" height="6" fill="#111"/>`;
-    o += `<text x="${(lx+10)}" y="${ly+5}" font-size="8" fill="#555" font-family="Arial">Stolpe 120\u00d7120</text>`;
-    o += `<rect x="${(lx+90)}" y="${ly}" width="10" height="4" fill="none" stroke="#000" stroke-width="1.5"/>`;
-    o += `<text x="${(lx+104)}" y="${ly+5}" font-size="8" fill="#555" font-family="Arial">R\u00e4cke</text>`;
-    o += `<line x1="${(lx+145)}" y1="${(ly+3)}" x2="${(lx+160)}" y2="${(ly+3)}" stroke="#888" stroke-width="0.8" stroke-dasharray="4,3"/>`;
-    o += `<text x="${(lx+164)}" y="${ly+5}" font-size="8" fill="#555" font-family="Arial">B\u00e4rlina</text>`;
-  }
-
-  return o;
-}
 
 // ============================================================
 // RENDERING
@@ -1432,8 +876,11 @@ function visaProjekt(id) {
   // Dölj dimensioner tills upload-steget är klart
   document.getElementById('pv-dim-sektion').classList.add('dold');
 
-  // Stang ritvy
+  // Stäng ritvy och resetta CAD-state
   ritvyOpen = false;
+  cad3dLaddad = '';
+  cadLagerData = null;
+  lager = {};
   document.getElementById('ritvy-sektion').classList.add('dold');
   var ritvyBtn = document.getElementById('btn-ritvy');
   if (ritvyBtn) ritvyBtn.textContent = '\u{1F4D0} Anpassa och visa detaljritning';
@@ -1452,6 +899,17 @@ function visaProjekt(id) {
   renderInkopslista(p);
   renderVerktyg(p);
   uppdateraKostnadDisplay();
+
+  // Förladda CAD 3D-data i bakgrunden (med default-dimensioner)
+  if (p.lagerPerSteg && window.CadViewer) {
+    var regler = ByggRegler.hamta(id);
+    if (regler) {
+      aktuellaB = regler.standard.b;
+      aktuellaL = regler.standard.l;
+      aktuellaH = regler.standard.h;
+      forladdaCad3D(id);
+    }
+  }
 
   // Visa projektvyn med smooth transition
   const innehall = document.getElementById('projekt-innehall');
@@ -1483,9 +941,19 @@ function visaInspirationFas(id) {
   const insp = p.inspiration;
   const sek = document.getElementById('pv-inspiration');
 
-  // Fyll hero-gradient
-  document.getElementById('insp-hero-bild').style.background =
-    'linear-gradient(135deg, ' + insp.gradientColors[0] + ', ' + insp.gradientColors[1] + ')';
+  // Fyll hero-bild — använd första riktiga bilden om den finns, annars gradient
+  var heroEl = document.getElementById('insp-hero-bild');
+  var heroBild = null;
+  if (insp.galleri) {
+    for (var hi = 0; hi < insp.galleri.length; hi++) {
+      if (insp.galleri[hi].bild) { heroBild = insp.galleri[hi].bild; break; }
+    }
+  }
+  if (heroBild) {
+    heroEl.style.background = 'url(' + heroBild + ') center/cover no-repeat';
+  } else {
+    heroEl.style.background = 'linear-gradient(135deg, ' + insp.gradientColors[0] + ', ' + insp.gradientColors[1] + ')';
+  }
 
   // Namn och budskap
   document.getElementById('insp-namn').textContent = p.namn;
@@ -1493,7 +961,10 @@ function visaInspirationFas(id) {
 
   // Galleri (bilder eller placeholder-gradienter)
   var galleri = document.getElementById('insp-galleri');
-  galleri.innerHTML = insp.galleri.map(function(g) {
+  galleri.innerHTML = insp.galleri.filter(function(g) {
+    // Hoppa över bilden som redan visas som hero
+    return !(g.bild && g.bild === heroBild);
+  }).map(function(g) {
     if (g.bild) {
       return '<div class="insp-galleri-bild" style="background-image: url(' + g.bild + '); background-size: cover; background-position: center"></div>';
     }
@@ -1623,7 +1094,7 @@ function bytVy(vy) {
       byggRitvyKontroller(valtProjekt);
       uppdateraLagerPanel(valtProjekt);
       renderRitvy();
-      initRitvyDrag();
+      // Three.js OrbitControls hanterar drag/zoom
     } else {
       document.getElementById('ritvy-sektion').classList.remove('dold');
     }
@@ -1705,6 +1176,11 @@ function visaDimensioner() {
     uppdateraPreview();
     uppdateraDimTip(aktuellaB, aktuellaL);
     uppdateraRackeInfo(aktuellaH);
+
+    // Förladda CAD 3D-data i bakgrunden för instruktionsbilder
+    if (p.lagerPerSteg && !cadLagerData && window.CadViewer) {
+      forladdaCad3D(id);
+    }
   } else {
     aktuelltDesign = null;
     aktuelltBerakning = null;
@@ -1818,6 +1294,17 @@ function gaaTillbaka() {
 
 let oppetSteg = -1;
 
+function bytStegBild(btn, url, bildtext) {
+  var img = document.getElementById('steg-bild-stor-img');
+  var text = document.getElementById('steg-bild-stor-text');
+  if (img) img.src = url;
+  if (text) text.textContent = bildtext || '';
+  // Markera aktiv thumbnail
+  var alla = btn.parentElement.querySelectorAll('.steg-bild-thumb');
+  alla.forEach(function(t) { t.classList.remove('aktiv'); });
+  btn.classList.add('aktiv');
+}
+
 function hamtaProgress(projektId) {
   try {
     return JSON.parse(localStorage.getItem('bygg_progress_' + projektId)) || {};
@@ -1913,6 +1400,48 @@ function renderDetalj(p, prog) {
   const steg = p.steg[i];
   const klar = !!prog[i];
   const harSvg = p.svgar && p.svgar[i];
+  const lagerSteg = p.lagerPerSteg && p.lagerPerSteg[i];
+  const cadReady = lagerSteg && cadLagerData && window.CadViewer && CadViewer.isReady();
+
+  // Generera CAD-snapshots om tillgänglig
+  let skissHtml = '';
+  if (cadReady) {
+    // Normalisera: stöd både nytt format (vyer) och gammalt (nya/gamla direkt)
+    var vyer = lagerSteg.vyer || [{ namn: "Översikt", nya: lagerSteg.nya, gamla: lagerSteg.gamla }];
+    var bilder = [];
+    for (var v = 0; v < vyer.length; v++) {
+      var vy = vyer[v];
+      var dataUrl = CadViewer.snapshot(vy.nya, vy.gamla, vy.kamera || null);
+      if (dataUrl) bilder.push({ url: dataUrl, namn: vy.namn, bildtext: vy.bildtext || '' });
+    }
+    if (bilder.length === 1) {
+      skissHtml = `<div class="steg-detalj-skiss"><img src="${bilder[0].url}" alt="${bilder[0].namn}"></div>`;
+    } else if (bilder.length > 1) {
+      var huvudBild = bilder[0];
+      var detaljer = bilder.slice(1);
+      skissHtml = `<div class="steg-bilder">
+        <div class="steg-bild-huvud" id="steg-bild-stor">
+          <img src="${huvudBild.url}" alt="${huvudBild.namn}" id="steg-bild-stor-img">
+          <div class="steg-bild-bildtext" id="steg-bild-stor-text">${huvudBild.bildtext}</div>
+        </div>
+        <div class="steg-bild-detaljer">
+          <button class="steg-bild-thumb aktiv" onclick="bytStegBild(this, '${huvudBild.url}', '${huvudBild.bildtext.replace(/'/g, "\\'")}')">
+            <img src="${huvudBild.url}" alt="${huvudBild.namn}">
+            <span>${huvudBild.namn}</span>
+          </button>
+          ${detaljer.map(function(d) {
+            return `<button class="steg-bild-thumb" onclick="bytStegBild(this, '${d.url}', '${d.bildtext.replace(/'/g, "\\'")}')">
+              <img src="${d.url}" alt="${d.namn}">
+              <span>${d.namn}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+  }
+  if (!skissHtml && harSvg) {
+    skissHtml = `<div class="steg-detalj-skiss">${p.svgar[i]}</div>`;
+  }
 
   return `
     <div class="steg-detalj">
@@ -1930,7 +1459,7 @@ function renderDetalj(p, prog) {
         </button>
       </div>
 
-      ${harSvg ? `<div class="steg-detalj-skiss">${p.svgar[i]}</div>` : ''}
+      ${skissHtml}
 
       <div class="steg-detalj-text">
         ${losSubsteg(steg)}
