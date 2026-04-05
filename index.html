@@ -203,16 +203,10 @@
     </section>
   </main>
 
-  <!-- Three.js för interaktiv 3D -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-    }
-  }
-  </script>
-  <script type="module" src="cad-viewer.js"></script>
+  <!-- Three.js för interaktiv 3D (global builds, fungerar med file://) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/STLLoader.js"></script>
 
   <script src="projekt-data.js"></script>
   <script src="regler.js"></script>
@@ -222,6 +216,7 @@
   <script src="generator.js"></script>
   <script src="editor.js"></script>
   <script src="ai-visualisering.js"></script>
+  <script src="cad-viewer.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
