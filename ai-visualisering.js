@@ -86,10 +86,15 @@ var AIVisualisering = (function () {
   function byggPrompt(projektTyp, dim) {
     var description = _projektPrompt[projektTyp] || ('a ' + projektTyp + ', natural wood, Scandinavian style');
 
-    return description + ', high detail, daylight, 8k uhd, dslr photo, sharp focus, natural lighting';
+    var mattText = '';
+    if (dim && dim.b && dim.l) {
+      mattText = ', approximately ' + dim.b + ' meters wide and ' + dim.l + ' meters deep';
+    }
+
+    return description + mattText + ', high detail, daylight, 8k uhd, dslr photo, sharp focus, natural lighting';
   }
 
-  async function generera(projektTyp, dim, userImageBase64, maskBase64) {
+  async function generera(projektTyp, dim, userImageBase64, maskBase64, cadCannyBase64) {
     if (!kontrolleraKostnad()) {
       return { ok: false, error: 'Dagsgränsen på ' + _config.maxPerDag + ' genereringar har uppnåtts.' };
     }
@@ -103,11 +108,13 @@ var AIVisualisering = (function () {
     try {
       var prompt = byggPrompt(projektTyp, dim);
 
-      // Resize bild + mask (behåll proportioner, max 1024px)
+      // Resize bild + mask + ev. CAD-canny (behåll proportioner, max 2048px)
       var resizedImage = await _resizeFit(userImageBase64, 2048);
       var resizedMask = await _resizeFit(maskBase64, 2048);
+      var resizedCanny = cadCannyBase64 ? await _resizeFit(cadCannyBase64, 2048) : null;
 
-      var payload = { prompt: prompt, image: resizedImage, mask: resizedMask };
+      var payload = { prompt: prompt, image: resizedImage, mask: resizedMask, dimensions: dim };
+      if (resizedCanny) payload.cadCanny = resizedCanny;
 
       var res = await fetch(_config.proxyUrl + '/api/visualisera', {
         method: 'POST',
@@ -144,7 +151,7 @@ var AIVisualisering = (function () {
 
     var instruktion = document.createElement('p');
     instruktion.className = 'mask-instruktion';
-    instruktion.textContent = 'Måla på bilden där du vill att bygget ska placeras, klicka sedan "Generera".';
+    instruktion.textContent = 'Måla hela ytan där bygget ska synas — inklusive höjden, inte bara marken. Klicka sedan "Generera".';
     container.appendChild(instruktion);
 
     var wrapper = document.createElement('div');
@@ -225,7 +232,8 @@ var AIVisualisering = (function () {
     btnGenerate.textContent = 'Generera';
     btnGenerate.onclick = function () {
       var maskData = exportMask(canvas);
-      if (onGenerate) onGenerate(maskData);
+      var analys = analyseraMaskCanvas(canvas);
+      if (onGenerate) onGenerate(maskData, analys);
     };
     toolbar.appendChild(btnGenerate);
 
@@ -295,6 +303,83 @@ var AIVisualisering = (function () {
     canvas.addEventListener('touchend', stopDraw, { passive: false });
   }
 
+  // Analysera mask-canvasen: bounding box för målade pixlar + uppskattad aspect ratio.
+  // Returnerar { ok, bbox: {x,y,w,h}, aspect, fyllning } där aspect = bredd / höjd (perspektiv ej korrigerat).
+  function analyseraMaskCanvas(canvas) {
+    var w = canvas.width;
+    var h = canvas.height;
+    if (!w || !h) return { ok: false };
+    var data = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+    var minX = w, minY = h, maxX = -1, maxY = -1, antal = 0;
+    // Sampla varannan pixel för fart
+    for (var y = 0; y < h; y += 2) {
+      for (var x = 0; x < w; x += 2) {
+        var idx = (y * w + x) * 4 + 3;
+        if (data[idx] > 0) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+          antal++;
+        }
+      }
+    }
+    if (maxX < 0 || antal < 30) return { ok: false };
+    var bw = maxX - minX + 1;
+    var bh = maxY - minY + 1;
+    return {
+      ok: true,
+      bbox: { x: minX, y: minY, w: bw, h: bh },
+      aspect: bw / bh,
+      fyllning: antal / ((w * h) / 4)
+    };
+  }
+
+  // Skala om en mask-PNG (dataURL) kring sin centroid med givna ratio bredd/höjd.
+  // Används när användaren ändrat b/l efter första genereringen — vi blåser upp masken
+  // proportionellt så det nya bygget får plats.
+  function skalaMaskRunt(maskDataUrl, ratioX, ratioY) {
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height;
+        // Hitta bbox-centroid på vita pixlar
+        var tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        var tctx = tmp.getContext('2d');
+        tctx.drawImage(img, 0, 0);
+        var data = tctx.getImageData(0, 0, w, h).data;
+        var minX = w, minY = h, maxX = -1, maxY = -1;
+        for (var y = 0; y < h; y += 2) {
+          for (var x = 0; x < w; x += 2) {
+            // vit pixel = R>128
+            if (data[(y * w + x) * 4] > 128) {
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+        if (maxX < 0) { resolve(maskDataUrl); return; }
+        var cx = (minX + maxX) / 2;
+        var cy = (minY + maxY) / 2;
+
+        var out = document.createElement('canvas');
+        out.width = w; out.height = h;
+        var octx = out.getContext('2d');
+        octx.fillStyle = '#000';
+        octx.fillRect(0, 0, w, h);
+        octx.translate(cx, cy);
+        octx.scale(ratioX, ratioY);
+        octx.translate(-cx, -cy);
+        octx.drawImage(tmp, 0, 0);
+        resolve(out.toDataURL('image/png'));
+      };
+      img.src = maskDataUrl;
+    });
+  }
+
   function exportMask(canvas) {
     var w = canvas.width;
     var h = canvas.height;
@@ -340,12 +425,19 @@ var AIVisualisering = (function () {
     container.appendChild(wrapper);
   }
 
-  function renderBild(container, url) {
+  function renderBild(container, url, options) {
     container.innerHTML = '';
 
     var img = document.createElement('img');
     img.src = url;
     img.alt = 'AI-genererad visualisering';
+
+    if (options && options.maskSkalad) {
+      var varning = document.createElement('p');
+      varning.className = 'ai-mask-varning';
+      varning.textContent = '⚠️ Masken skalades automatiskt efter dina nya mått — rita om om resultatet ser fel ut.';
+      container.appendChild(varning);
+    }
 
     var knappar = document.createElement('div');
     knappar.className = 'ai-kontroller-knappar';
@@ -417,7 +509,9 @@ var AIVisualisering = (function () {
     renderLaddning: renderLaddning,
     renderBild: renderBild,
     renderFel: renderFel,
-    renderSektion: renderSektion
+    renderSektion: renderSektion,
+    analyseraMaskCanvas: analyseraMaskCanvas,
+    skalaMaskRunt: skalaMaskRunt
   };
 
 })();

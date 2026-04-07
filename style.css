@@ -4,6 +4,7 @@
   padding: 0;
 }
 
+
 body {
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   background: #f4f1ec;
@@ -14,25 +15,20 @@ body {
 .hero-landing {
   position: relative;
   width: 100%;
-  height: 55vh;
-  min-height: 320px;
+  height: 70vh;
+  min-height: 460px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: url('assets/hero-bg.jpg') center/cover no-repeat;
+  background: url('assets/hero-bg.jpg') center/cover fixed no-repeat;
   background-color: #1a3a24;
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.55) 0%,
-    rgba(0, 0, 0, 0.35) 50%,
-    rgba(0, 0, 0, 0.6) 100%
-  );
+  background: rgba(0, 0, 0, 0.45);
   z-index: 1;
 }
 
@@ -88,25 +84,6 @@ header.scrolled {
 }
 
 /* --- Sökfält --- */
-.sok-wrapper {
-  position: relative;
-  max-width: 580px;
-}
-
-.sok-falt-container {
-  display: flex;
-  align-items: center;
-  background: white;
-  border-radius: 10px;
-  padding: 0 14px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  transition: box-shadow 0.2s;
-}
-
-.sok-falt-container:focus-within {
-  box-shadow: 0 3px 18px rgba(0,0,0,0.3);
-}
-
 .sok-ikon {
   font-size: 1.1rem;
   margin-right: 10px;
@@ -129,26 +106,14 @@ header.scrolled {
   color: #aaa;
 }
 
-.sok-rensa {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.95rem;
-  color: #aaa;
-  padding: 4px;
-  border-radius: 50%;
-  line-height: 1;
-  transition: color 0.15s, background 0.15s;
-}
-.sok-rensa:hover { color: #555; background: #f0f0f0; }
-
 /* Sökfält vid kort-header */
 .kort-sok-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-top: 80px;
+  margin-bottom: 40px;
   flex-wrap: wrap;
 }
 
@@ -195,14 +160,18 @@ header.scrolled {
 }
 
 main {
-  max-width: 960px;
-  margin: 32px auto;
-  padding: 0 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* Bredda projektvyn för designläget */
+main:has(#projekt-innehall.synlig) {
+  max-width: 1320px;
 }
 
 /* --- Projektkort --- */
 .projekt-lista h2 {
-  font-size: 1.3rem;
   margin-bottom: 16px;
 }
 
@@ -214,7 +183,8 @@ main {
 
 .sektion-rubrik {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.5rem;
+  font-size: clamp(3.6rem, 8vw, 6rem);
+  font-weight: 700;
   color: #1a1a1a;
 }
 
@@ -297,7 +267,441 @@ main {
 }
 
 .dold {
-  display: none;
+  display: none !important;
+}
+
+/* === Story-sektioner (full bredd, Apple-stil) === */
+.story-sektion {
+  width: 100%;
+  padding: clamp(72px, 11vw, 140px) 0;
+  position: relative;
+  overflow: hidden;
+}
+.story-pitch        { background: #f4f1ec; }
+.story-inspiration  { background: #ffffff; }
+.story-hur          { background: #1a3a24; color: #f4f1ec; overflow: visible; }
+
+.sektion-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+.story-rubrik-stor {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #1a3a24;
+  margin: 0 0 28px;
+  text-align: center;
+}
+.story-rubrik-stor span {
+  font-style: italic;
+  font-weight: 600;
+  color: #4a6b52;
+}
+.story-underrubrik {
+  text-align: center;
+  font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+  color: #6a6a6a;
+  margin: 0;
+  font-weight: 400;
+}
+
+.story-eyebrow {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a8275;
+  margin: 0 0 36px 4px;
+}
+.story-hur .story-eyebrow { color: #b8d4be; }
+.story-eyebrow.center { text-align: center; margin-left: 0; margin-bottom: 56px; }
+
+/* Inspirationsrad — dubbel marquee */
+.story-inspiration-inner {
+  width: 100%;
+}
+.story-inspiration-inner .story-eyebrow.center {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 32px;
+}
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  padding: 14px 0;
+  margin-bottom: 18px;
+  background: #ffffff;
+  /* mjuk fade i kanterna */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+          mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+.marquee:last-child { margin-bottom: 0; }
+.marquee-track {
+  display: flex;
+  gap: 24px;
+  width: max-content;
+  will-change: transform;
+}
+.marquee-vanster {
+  animation: marquee-left 70s linear infinite;
+}
+.marquee-hoger {
+  animation: marquee-right 55s linear infinite;
+}
+@keyframes marquee-left {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes marquee-right {
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-vanster, .marquee-hoger { animation: none; }
+}
+
+.inspiration-kort {
+  flex: 0 0 clamp(280px, 28vw, 420px);
+  cursor: pointer;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+.inspiration-kort:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.18);
+}
+.inspiration-kort-bild {
+  position: relative;
+  height: clamp(280px, 28vw, 400px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.inspiration-kort:hover .inspiration-kort-bild {
+  transform: scale(1.05);
+}
+.inspiration-kort-ikon {
+  font-size: 6rem;
+  opacity: 0.65;
+}
+.inspiration-kort-overlay {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 28px 28px 24px;
+  background: linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.0));
+  color: #fff;
+}
+.inspiration-kort-overlay h3 {
+  margin: 0 0 6px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.inspiration-kort-pris {
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+/* Hur funkar det — sticky scrollytelling */
+.story-hur { padding: 0; }
+.hur-scrolly {
+  position: relative;
+  height: 260vh;
+}
+.hur-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 32px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.hur-sticky .story-eyebrow.center {
+  margin-bottom: 28px;
+  margin-top: 0;
+}
+.hur-steg-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4vh;
+  flex: 1;
+  justify-content: center;
+  min-height: 0;
+  transform: translateY(var(--hur-slide, 0));
+  will-change: transform;
+}
+.hur-steg {
+  display: grid;
+  grid-template-columns: 140px 1fr 1.1fr;
+  gap: 36px;
+  min-height: 0;
+  align-items: center;
+  opacity: 0.16;
+  transform: translateX(-24px);
+  filter: blur(1px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hur-steg.aktiv {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+.hur-nummer {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(4rem, 9vw, 9rem);
+  line-height: 1;
+  font-weight: 700;
+  color: #4a6b52;
+  transition: color 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hur-steg.aktiv .hur-nummer {
+  color: #f4f1ec;
+}
+.hur-text h4 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 14px;
+  letter-spacing: -0.01em;
+}
+.hur-text p {
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  line-height: 1.6;
+  color: rgba(244, 241, 236, 0.85);
+  max-width: 520px;
+  margin: 0;
+}
+.hur-bild {
+  width: 100%;
+  height: 22vh;
+  max-height: 240px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Scroll-reveal animering */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].revealed {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .story-sektion { padding: 64px 0; }
+  .sektion-inner { padding: 0 20px; }
+  .hur-scrolly { height: auto; }
+  .hur-sticky { position: static; height: auto; padding: 0 20px; }
+  .hur-steg-lista { gap: 56px; }
+  .hur-steg {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .hur-steg .hur-nummer { color: #f4f1ec; font-size: 4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hur-steg {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+  .hur-steg .hur-nummer { color: #f4f1ec; }
+}
+
+/* === Designläge === */
+.btn-anpassa {
+  display: block;
+  margin: 24px auto;
+  padding: 14px 32px;
+  background: #2b6a3a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(43, 106, 58, 0.25);
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-anpassa:hover {
+  background: #245a32;
+  transform: translateY(-1px);
+}
+
+.design-lage {
+  background: #fff;
+  border: 1px solid #e2dfd8;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.design-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eee;
+}
+.design-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c2c2c;
+}
+.design-knappar {
+  display: flex;
+  gap: 10px;
+}
+.design-spara, .design-avbryt {
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+.design-spara {
+  background: #2b6a3a;
+  color: #fff;
+}
+.design-spara:hover { background: #245a32; }
+.design-avbryt {
+  background: #f0ede6;
+  color: #555;
+  border: 1px solid #d8d3c7;
+}
+.design-avbryt:hover { background: #e6e2d8; }
+
+.design-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+.design-3d-slot {
+  background: #f8f6f2;
+  border-radius: 10px;
+  min-height: 520px;
+  overflow: hidden;
+}
+.design-3d-slot > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 520px;
+}
+.design-kontroller {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+@media (max-width: 900px) {
+  .design-body { grid-template-columns: 1fr; }
+}
+
+/* Projekt-banner-bild överst */
+.pv-banner-bild {
+  width: 100%;
+  height: 280px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 14px;
+  margin: 18px 0 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+@media (max-width: 700px) {
+  .pv-banner-bild { height: 180px; }
+}
+.design-grupp {
+  background: #fafaf7;
+  border: 1px solid #ece8df;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.design-grupp h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+}
+
+.slider-med-skiss {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.slider-med-skiss .pv-slider-block {
+  flex: 1;
+  min-width: 0;
+}
+.mini-skiss {
+  flex: 0 0 140px;
+  height: 110px;
+  background: #fafaf7;
+  border: 1px solid #e6e2d8;
+  border-radius: 6px;
+  padding: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mini-skiss svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mini-skiss-laddar {
+  font-size: 18px;
+  color: #bbb;
+}
+.mini-skiss-tom {
+  visibility: hidden;
 }
 
 /* --- Flikar --- */
@@ -745,40 +1149,6 @@ ol.steg-substeg li {
   letter-spacing: 0.05em;
 }
 
-/* --- Dimensionsväljare --- */
-.dim-konfig {
-  background: #fff8e7;
-  border: 2px solid #f0c040;
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.dim-kontroller {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  min-width: 200px;
-}
-
-.ritvy-knapp {
-  background: #2b6a3a;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 7px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  align-self: flex-start;
-  margin-top: 4px;
-}
-.ritvy-knapp:hover { background: #1e4e2b; }
-
 /* --- Ritvy --- */
 #ritvy-sektion {
   background: #f0f0f0;
@@ -796,17 +1166,6 @@ ol.steg-substeg li {
   border: 1px solid #e8e8e8;
 }
 .ritvy-kontroller:empty { display: none; }
-.ritvy-kontroller-rubrik {
-  font-size: 1rem;
-  color: #222;
-  margin: 0 0 16px 0;
-  font-weight: 600;
-}
-.ritvy-slider-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px 28px;
-}
 
 .ritvy-header {
   display: flex;
@@ -905,71 +1264,10 @@ ol.steg-substeg li {
   display: block;
   aspect-ratio: 600 / 420;
 }
-.ritvy-canvas #ritvy-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
 .ritvy-canvas svg {
   width: 100%;
   height: auto;
   display: block;
-}
-
-.dim-ritning {
-  flex: 0 0 280px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e0c060;
-  padding: 4px;
-}
-
-.dim-ritning svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.dim-rubrik {
-  font-weight: bold;
-  color: #8B6000;
-  font-size: 0.95rem;
-  white-space: nowrap;
-}
-
-.dim-rad {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dim-rad label {
-  font-size: 0.9rem;
-  color: #555;
-  min-width: 40px;
-}
-
-.dim-rad input[type="range"] {
-  width: 130px;
-  accent-color: #2b6a3a;
-  cursor: pointer;
-}
-
-.dim-val {
-  font-weight: bold;
-  color: #2b6a3a;
-  min-width: 40px;
-  font-size: 1rem;
-}
-
-.dim-yta {
-  font-size: 0.9rem;
-  color: #555;
-  border-left: 1px solid #e0c060;
-  padding-left: 20px;
 }
 
 .dim-etikett {
@@ -1092,10 +1390,17 @@ ol.steg-substeg li {
 }
 
 @media print {
-  header, .hero-landing, .projekt-lista, .flikar, .skriv-ut-knapp { display: none; }
+  header, .hero-landing, .projekt-lista, .flikar, .skriv-ut-knapp, .story-sektion { display: none; }
   #projekt-innehall { display: block !important; opacity: 1 !important; transform: none !important; }
-  #inkopslista { display: block !important; }
-  #instruktioner, #verktyg { display: none !important; }
+  #verktyg { display: none !important; }
+
+  /* Läge: skriva ut inköpslistan */
+  body.printing-inkop #inkopslista { display: block !important; }
+  body.printing-inkop #instruktioner { display: none !important; }
+
+  /* Läge: skriva ut instruktionerna */
+  body.printing-instr #instruktioner { display: block !important; }
+  body.printing-instr #inkopslista { display: none !important; }
 }
 
 /* ============================================================
@@ -1268,40 +1573,11 @@ ol.steg-substeg li {
   .pv-dim-layout { grid-template-columns: 1fr; }
 }
 
-.pv-visualisering {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-}
-.pv-visualisering svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.pv-info-panel {
-  text-align: left;
-}
-
 .pv-sammanfattning {
   font-size: 0.95rem;
   color: #555;
   line-height: 1.6;
   margin: 0 0 18px 0;
-}
-
-.pv-info-panel .ritvy-knapp {
-  width: auto;
-  padding: 14px 32px;
-  font-size: 1rem;
-  border-radius: 10px;
-}
-
-.pv-dim-rubrik {
-  font-size: 1.05rem;
-  color: #222;
-  margin-bottom: 20px;
-  font-weight: 600;
 }
 
 /* Stora sliders */
@@ -1593,16 +1869,6 @@ ol.steg-substeg li {
   margin-top: 10px;
 }
 
-/* Ritvy-knapp i ny vy */
-#pv-dim-sektion .ritvy-knapp {
-  width: 100%;
-  margin-top: 14px;
-  padding: 12px;
-  font-size: 0.95rem;
-  border-radius: 10px;
-  text-align: center;
-}
-
 /* ============================================================
    RUBRIKER — Playfair Display
    ============================================================ */
@@ -1808,25 +2074,6 @@ ol.steg-substeg li {
   text-align: center;
 }
 
-/* Uppdatera AI-bild knapp i dim-sektionen */
-.ai-uppdatera-knapp {
-  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 12px;
-  transition: all 0.15s;
-  width: 100%;
-}
-
-.ai-uppdatera-knapp:hover {
-  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
-}
-
 /* ============================================================
    SHIMMER LADDNING
    ============================================================ */
@@ -2006,6 +2253,31 @@ ol.steg-substeg li {
   gap: 20px;
 }
 
+/* Populära projekt — highlight-kant och badge (altan & pergola) */
+.kort-grid .kort:not(.kommande):nth-child(2),
+.kort-grid .kort:not(.kommande):nth-child(3) {
+  position: relative;
+  border: 2px solid #2b6a3a;
+  box-shadow: 0 4px 18px rgba(43, 106, 58, 0.18);
+}
+.kort-grid .kort:not(.kommande):nth-child(2)::after,
+.kort-grid .kort:not(.kommande):nth-child(3)::after {
+  content: 'Populär';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #2b6a3a;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
 .kort {
   padding: 0;
   text-align: left;
@@ -2038,14 +2310,6 @@ ol.steg-substeg li {
   font-size: 0.82rem;
   color: #666;
   line-height: 1.4;
-}
-
-.kort-meta {
-  display: flex;
-  gap: 12px;
-  margin-top: 10px;
-  font-size: 0.78rem;
-  color: #888;
 }
 
 .kort-kostnad {
@@ -2281,4 +2545,112 @@ ol.steg-substeg li {
   .inspiration-budskap {
     font-size: 1rem;
   }
+}
+
+/* Mask-uppskattning hint + AI-uppdatera-knapp */
+.mask-matt-hint {
+  background: #eaf3ec;
+  border: 1px solid #b8d4be;
+  color: #2b6a3a;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-uppdatera-slot {
+  margin-top: 16px;
+}
+.ai-uppdatera-knapp {
+  width: 100%;
+  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  color: #fff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ai-uppdatera-knapp:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(43,106,58,0.3);
+}
+.ai-mask-varning {
+  background: #fff7e6;
+  border: 1px solid #f0d090;
+  color: #8a5a00;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.sid-footer {
+  background: #1a3a24;
+  color: #e8efe9;
+  margin-top: 80px;
+  padding: 56px 32px 24px;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+.sid-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+  padding-bottom: 36px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.sid-footer-brand h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #fff;
+}
+.sid-footer-brand p {
+  font-size: 0.95rem;
+  color: #b8d4be;
+  max-width: 360px;
+  line-height: 1.5;
+}
+.sid-footer-kontakt h4 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #b8d4be;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.sid-footer-kontakt p {
+  margin: 0;
+  font-size: 1rem;
+}
+.sid-footer-kontakt a {
+  color: #fff;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+  transition: border-color 0.2s;
+}
+.sid-footer-kontakt a:hover {
+  border-bottom-color: #fff;
+}
+.sid-footer-botten {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-top: 20px;
+  font-size: 0.85rem;
+  color: #8aa191;
+  text-align: center;
+}
+@media print {
+  .sid-footer { display: none; }
 }

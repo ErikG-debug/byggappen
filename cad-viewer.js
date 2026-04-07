@@ -61,6 +61,8 @@
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
+    controls.minDistance = 500;
+    controls.maxDistance = 12000;
     controls.target.set(0, 300, 0);
     controls.update();
 

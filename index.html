@@ -28,6 +28,60 @@
     </div>
   </header>
 
+  <!-- ── Landningsberättelse (full bredd, story-stil) ── -->
+  <section class="story-sektion story-pitch">
+    <div class="sektion-inner">
+      <h2 class="story-rubrik-stor" data-reveal>Bygg själv.<br><span>Vi planerar, ritar och instruerar steg för steg.</span></h2>
+      <p class="story-underrubrik" data-reveal>Det har aldrig varit enklare att göra det själv.</p>
+    </div>
+  </section>
+
+  <section class="story-sektion story-inspiration">
+    <div class="story-inspiration-inner">
+      <h3 class="story-eyebrow center" data-reveal>Välj ett av våra projekt</h3>
+      <div class="marquee" id="marquee-rad-1">
+        <div class="marquee-track marquee-vanster"></div>
+      </div>
+      <div class="marquee" id="marquee-rad-2">
+        <div class="marquee-track marquee-hoger"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-sektion story-hur">
+    <div class="hur-scrolly">
+      <div class="hur-sticky">
+        <h3 class="story-eyebrow center">Hur funkar det?</h3>
+        <div class="hur-steg-lista">
+          <div class="hur-steg" data-index="0">
+            <div class="hur-nummer">01</div>
+            <div class="hur-text">
+              <h4>Välj ett projekt</h4>
+              <p>Bläddra bland färdiga byggprojekt och hitta något som passar din trädgård.</p>
+            </div>
+            <div class="hur-bild" data-steg="1">📷</div>
+          </div>
+          <div class="hur-steg" data-index="1">
+            <div class="hur-nummer">02</div>
+            <div class="hur-text">
+              <h4>Anpassa &amp; visualisera</h4>
+              <p>Justera mått, se 3D-modellen från alla vinklar — och få bilder på hur det skulle se ut hemma hos dig.</p>
+            </div>
+            <div class="hur-bild" data-steg="2">✏️</div>
+          </div>
+          <div class="hur-steg" data-index="2">
+            <div class="hur-nummer">03</div>
+            <div class="hur-text">
+              <h4>Bygg med ritningar</h4>
+              <p>Färgkodade detaljritningar, komplett inköpslista och steg-för-steg-instruktioner. Ladda ner allt som PDF — en för inköpslistan och en för instruktionsmanualen — och ta med ut på bygget.</p>
+            </div>
+            <div class="hur-bild" data-steg="3">🔨</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <main>
 
     <!-- ── Startsida: projektkort ── -->
@@ -40,7 +94,7 @@
             type="text"
             id="sok-input-kort"
             class="sok-input-kort"
-            placeholder="Filtrera projekt..."
+            placeholder="Sök projekt..."
             autocomplete="off"
             oninput="sokProjekt(this.value)"
             onkeydown="sokTangent(event)"
@@ -55,6 +109,9 @@
     <section id="projekt-innehall" class="dold">
 
       <button class="tillbaka-knapp" onclick="gaaTillbaka()">← Alla projekt</button>
+
+      <!-- Banner-bild för projektet (visas på upload/planera-stegen, inte inspiration) -->
+      <div id="pv-banner-bild" class="pv-banner-bild dold"></div>
 
       <!-- Stegindikator -->
       <div id="pv-steg-indikator" class="steg-indikator dold">
@@ -140,13 +197,6 @@
         </div>
       </div>
 
-      <!-- Vy-flikar -->
-      <div id="pv-vy-tabs" class="vy-tabs dold">
-        <button class="vy-tab aktiv-vy" id="vy-ai" onclick="bytVy('ai')">✨ AI-visualisering</button>
-        <button class="vy-tab" id="vy-3d" onclick="bytVy('3d')">📐 3D-modell</button>
-        <button class="vy-tab" id="vy-ritning" onclick="bytVy('ritning')">📋 Ritningar</button>
-      </div>
-
       <!-- AI-visualisering -->
       <div id="pv-ai-sektion" class="ai-sektion dold">
         <div class="ai-innehall">
@@ -162,9 +212,28 @@
         </div>
       </div>
 
-      <!-- Dimensioner + förhandsgranskning (byggs dynamiskt av byggSliders) -->
+      <!-- Projektöversikt (sammanfattning) -->
       <div id="pv-dim-sektion" class="dold">
         <div id="pv-dim-layout" class="pv-dim-layout"></div>
+      </div>
+
+      <!-- Anpassa design-knapp + designläge -->
+      <button id="btn-anpassa-design" class="btn-anpassa dold" onclick="oppnaDesignLage()">
+        ✏️ Anpassa design
+      </button>
+
+      <div id="design-lage" class="design-lage dold">
+        <div class="design-header">
+          <h3>Anpassa din design</h3>
+          <div class="design-knappar">
+            <button class="design-avbryt" onclick="avbrytDesign()">✗ Avbryt</button>
+            <button class="design-spara" onclick="sparaDesign()">✓ Spara design</button>
+          </div>
+        </div>
+        <div class="design-body">
+          <div id="design-3d-slot" class="design-3d-slot"></div>
+          <div id="design-kontroller" class="design-kontroller"></div>
+        </div>
       </div>
 
       <!-- 3D Detaljritning -->
@@ -199,6 +268,22 @@
 
     </section>
   </main>
+
+  <footer class="sid-footer">
+    <div class="sid-footer-inner">
+      <div class="sid-footer-brand">
+        <h3>Byggappen</h3>
+        <p>Bygg själv — vi planerar, ritar och instruerar.</p>
+      </div>
+      <div class="sid-footer-kontakt">
+        <h4>Kontakt</h4>
+        <p><a href="mailto:exempel@gmail.com">exempel@gmail.com</a></p>
+      </div>
+    </div>
+    <div class="sid-footer-botten">
+      © 2026 Byggappen
+    </div>
+  </footer>
 
   <!-- Three.js för interaktiv 3D (global builds, fungerar med file://) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>

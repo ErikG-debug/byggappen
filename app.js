@@ -5,6 +5,8 @@
 let aktuellaB = 4, aktuellaL = 3;
 let uploadedImage = null;
 let currentMask = null;
+let mattFranMask = false;        // Sant tills användaren rör en slider efter mask-uppskattning
+let senasteAIGenMatt = null;     // {b,l} vid senaste lyckade AI-bildgenerering — används för att visa "uppdatera"-knapp
 
 // ── Designmodell ──
 let aktuelltDesign = null;
@@ -68,36 +70,14 @@ function uppdateraVisualisering() {
 // ============================================================
 
 function byggSliders(projektTyp) {
-  var regler = ByggRegler.hamta(projektTyp);
-  if (!regler || !regler.ui) return;
-
-  var ui = regler.ui;
-  var dim = regler.dim;
-  var std = regler.standard;
+  // Bevarar bara sammanfattningen som projektöversikt — sliders flyttade till designläget.
+  var p = projekt[projektTyp];
   var container = document.getElementById('pv-dim-layout');
   if (!container) return;
-
   var html = '';
-
-  // 3D-visualisering
-  html += '<div class="pv-visualisering">';
-  html += '<svg id="preview-3d-svg" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"></svg>';
-  html += '</div>';
-
-  // Sammanfattning + knapp
-  html += '<div class="pv-info-panel">';
-
-  var p = projekt[projektTyp];
   if (p && p.sammanfattning) {
     html += '<p class="pv-sammanfattning">' + p.sammanfattning + '</p>';
   }
-
-  html += '<button class="ritvy-knapp" id="btn-ritvy" onclick="oppnaRitvy()">\u{1F4D0} Anpassa och visa detaljritning</button>';
-  if (uploadedImage) {
-    html += '<button class="ai-uppdatera-knapp" onclick="bytVy(\'ai\'); startaAIGenerering()">Uppdatera AI-bild med nya mått</button>';
-  }
-  html += '</div>';
-
   container.innerHTML = html;
 }
 
@@ -323,6 +303,15 @@ function uppdateraDimensioner() {
   renderRitvy();
   uppdateraDimTip(aktuellaB, aktuellaL);
   uppdateraKostnadDisplay();
+  schemalaggMiniSkiss();
+
+  // Användaren har rört en slider — mask-uppskattningen är inte längre "färsk"
+  if (mattFranMask) {
+    mattFranMask = false;
+    var hint = document.getElementById('mask-matt-hint');
+    if (hint) hint.remove();
+  }
+  uppdateraAiUppdateraKnapp();
 
   var p = projekt[valtProjekt];
   if (p) {
@@ -376,10 +365,11 @@ function toggleLager(namn) {
   }
 }
 
-function oppnaRitvy() {
-  ritvyOpen = !ritvyOpen;
+function oppnaRitvy(forceOpen) {
+  ritvyOpen = forceOpen === true ? true : !ritvyOpen;
   document.getElementById('ritvy-sektion').classList.toggle('dold', !ritvyOpen);
-  document.getElementById('btn-ritvy').textContent = ritvyOpen ? '\u{1F4D0} St\u00e4ng detaljritning' : '\u{1F4D0} Anpassa och visa detaljritning';
+  var btn = document.getElementById('btn-ritvy');
+  if (btn) btn.textContent = ritvyOpen ? '\u{1F4D0} St\u00e4ng detaljritning' : '\u{1F4D0} Anpassa och visa detaljritning';
   if (ritvyOpen) {
     byggRitvyKontroller(valtProjekt);
     uppdateraLagerPanel(valtProjekt);
@@ -388,7 +378,26 @@ function oppnaRitvy() {
 }
 
 function byggRitvyKontroller(projektTyp) {
+  // Sliders har flyttats till designläget — ritvy-kontroller är tom nu.
   var container = document.getElementById('ritvy-kontroller');
+  if (container) container.innerHTML = '';
+}
+
+// ============================================================
+// DESIGNLÄGE — alla sliders samlade här, med koherenta mini-skisser
+// ============================================================
+
+// Mappa sliderns nyckel → fokus-namn för /cad/{projekt}/skiss
+function _fokusForSlider(nyckel) {
+  if (nyckel === 'b') return 'bredd';
+  if (nyckel === 'l') return 'langd';
+  if (nyckel === 'h') return 'hojd';
+  if (nyckel === 'racke' || nyckel === 'rackesh') return 'racke';
+  return null;
+}
+
+function byggDesignKontroller(projektTyp) {
+  var container = document.getElementById('design-kontroller');
   if (!container) return;
   var regler = ByggRegler.hamta(projektTyp);
   if (!regler || !regler.ui) { container.innerHTML = ''; return; }
@@ -396,68 +405,178 @@ function byggRitvyKontroller(projektTyp) {
   var ui = regler.ui;
   var dim = regler.dim;
   var std = regler.standard;
-  var html = '<h3 class="ritvy-kontroller-rubrik">Anpassa storleken</h3>';
-  html += '<div class="ritvy-slider-grid">';
 
-  // Vanliga sliders
-  for (var i = 0; i < ui.sliders.length; i++) {
-    var s = ui.sliders[i];
+  function sliderHtml(s, isHojd) {
     var d = dim[s.nyckel];
     var val = s.nyckel === 'b' ? aktuellaB : s.nyckel === 'l' ? aktuellaL : s.nyckel === 'h' ? aktuellaH : std[s.nyckel];
-    html += '<div class="pv-slider-block">';
-    html += '<div class="pv-slider-header">';
-    html += '<span class="pv-slider-label">' + s.etikett + '</span>';
-    html += '<span class="pv-slider-val" id="slider-val-' + s.nyckel + '">' + s.format(val) + '</span>';
-    html += '</div>';
-    html += '<input type="range" id="slider-' + s.nyckel + '" min="' + d.min + '" max="' + d.max + '" step="' + d.steg + '" value="' + val + '" oninput="uppdateraDimensioner()">';
-    html += '<div class="pv-slider-minmax"><span>' + s.format(d.min) + '</span><span>' + s.format(d.max) + '</span></div>';
-    html += '</div>';
+    var handler = isHojd ? 'uppdateraHojd()' : 'uppdateraDimensioner()';
+    var fokus = _fokusForSlider(s.nyckel);
+    var skiss = fokus
+      ? '<div class="mini-skiss" data-fokus="' + fokus + '"><div class="mini-skiss-laddar">…</div></div>'
+      : '<div class="mini-skiss mini-skiss-tom"></div>';
+
+    var h = '<div class="slider-med-skiss">';
+    h += '  <div class="pv-slider-block">';
+    h += '    <div class="pv-slider-header">';
+    h += '      <span class="pv-slider-label">' + s.etikett + '</span>';
+    h += '      <span class="pv-slider-val" id="slider-val-' + s.nyckel + '">' + s.format(val) + '</span>';
+    h += '    </div>';
+    h += '    <input type="range" id="slider-' + s.nyckel + '" min="' + d.min + '" max="' + d.max + '" step="' + d.steg + '" value="' + val + '" oninput="' + handler + '">';
+    h += '    <div class="pv-slider-minmax"><span>' + s.format(d.min) + '</span><span>' + s.format(d.max) + '</span></div>';
+    h += '  </div>';
+    h += '  ' + skiss;
+    h += '</div>';
+    return h;
   }
 
-  // Yta-sammanfattning
-  if (ui.visaYta) {
-    html += '<div class="pv-dim-summary">';
-    html += '<div class="pv-yta-rad">';
-    html += '<span>' + (ui.ytaEtikett || 'Yta') + '</span>';
-    html += '<strong id="yta-val">' + (aktuellaB * aktuellaL).toFixed(1) + ' m\u00b2</strong>';
-    html += '</div>';
-    html += '<div class="pv-dim-tip" id="pv-dim-tip"></div>';
-    html += '</div>';
-  }
+  var html = '';
 
-  // Avancerat
-  if (ui.avancerat && ui.avancerat.length > 0) {
-    html += '<div class="pv-slider-block">';
-    html += '<button class="avancerat-toggle" id="avancerat-toggle" onclick="toggleAvancerat()">';
-    html += '<span class="avancerat-pil" id="avancerat-pil">\u25b8</span>';
-    html += ' Avancerade inst\u00e4llningar';
-    html += '</button>';
-    html += '<div id="avancerade-inst" class="avancerade-inst">';
-
-    for (var j = 0; j < ui.avancerat.length; j++) {
-      var a = ui.avancerat[j];
-      var da = dim[a.nyckel];
-      var va = a.nyckel === 'h' ? aktuellaH : std[a.nyckel];
-      html += '<div class="pv-slider-block">';
-      html += '<div class="pv-slider-header">';
-      html += '<span class="pv-slider-label">' + a.etikett + '</span>';
-      html += '<span class="pv-slider-val" id="slider-val-' + a.nyckel + '">' + a.format(va) + '</span>';
-      html += '</div>';
-      html += '<input type="range" id="slider-' + a.nyckel + '" min="' + da.min + '" max="' + da.max + '" step="' + da.steg + '" value="' + va + '" oninput="uppdateraHojd()">';
-      html += '<div class="pv-slider-minmax"><span>' + a.format(da.min) + '</span><span>' + a.format(da.max) + '</span></div>';
-      html += '</div>';
+  // Grupp 1: Storlek (bredd + längd)
+  var storlekSliders = (ui.sliders || []).filter(function(s) { return s.nyckel === 'b' || s.nyckel === 'l'; });
+  if (storlekSliders.length) {
+    html += '<div class="design-grupp"><h4>Storlek</h4>';
+    if (mattFranMask) {
+      html += '<div id="mask-matt-hint" class="mask-matt-hint">📐 Uppskattat från din markering på bilden</div>';
     }
+    storlekSliders.forEach(function(s) { html += sliderHtml(s, false); });
+    if (ui.visaYta) {
+      html += '<div class="pv-dim-summary"><div class="pv-yta-rad">';
+      html += '<span>' + (ui.ytaEtikett || 'Yta') + '</span>';
+      html += '<strong id="yta-val">' + (aktuellaB * aktuellaL).toFixed(1) + ' m\u00b2</strong>';
+      html += '</div><div class="pv-dim-tip" id="pv-dim-tip"></div></div>';
+    }
+    html += '</div>';
+  }
 
+  // Grupp 2: Höjd (vanliga + avancerade slidersar förutom storlek)
+  var hojdSliders = (ui.sliders || []).filter(function(s) { return s.nyckel === 'h'; })
+    .concat((ui.avancerat || []).filter(function(s) { return s.nyckel === 'h'; }));
+  if (hojdSliders.length) {
+    html += '<div class="design-grupp"><h4>Höjd</h4>';
+    hojdSliders.forEach(function(s) { html += sliderHtml(s, true); });
     html += '<div class="avancerat-info" id="avancerat-racke-info"></div>';
     html += '</div>';
+  }
+
+  // Grupp 3: Detaljer (övriga avancerade sliders)
+  var detaljSliders = (ui.avancerat || []).filter(function(s) { return s.nyckel !== 'h'; });
+  if (detaljSliders.length) {
+    html += '<div class="design-grupp"><h4>Detaljer</h4>';
+    detaljSliders.forEach(function(s) { html += sliderHtml(s, false); });
     html += '</div>';
   }
 
-  html += '</div>';
-  container.innerHTML = html;
+  // Slot för "uppdatera AI-bild"-knappen — fylls dynamiskt av uppdateraAiUppdateraKnapp()
+  html += '<div id="ai-uppdatera-slot" class="ai-uppdatera-slot"></div>';
 
+  container.innerHTML = html;
   uppdateraDimTip(aktuellaB, aktuellaL);
   uppdateraRackeInfo(aktuellaH);
+  uppdateraAiUppdateraKnapp();
+}
+
+// ── Designläge: state och kontroll ──
+var designLageOppet = false;
+var sparadeDimensioner = null;
+var miniSkissTimer = null;
+
+function oppnaDesignLage() {
+  if (!valtProjekt) return;
+  sparadeDimensioner = { b: aktuellaB, l: aktuellaL, h: aktuellaH };
+  designLageOppet = true;
+  document.getElementById('design-lage').classList.remove('dold');
+  var btn = document.getElementById('btn-anpassa-design');
+  if (btn) btn.classList.add('dold');
+
+  // Flytta 3D-containern in i designläget så reglagen sitter bredvid modellen
+  var slot = document.getElementById('design-3d-slot');
+  var cad3d = document.getElementById('cad-3d-container');
+  if (slot && cad3d && cad3d.parentElement !== slot) {
+    slot.appendChild(cad3d);
+    cad3d.classList.remove('dold');
+    cad3d.style.display = 'block';
+  }
+  // Dölj hela ritvy-sektionen medan designläget är aktivt
+  document.getElementById('ritvy-sektion').classList.add('dold');
+
+  byggDesignKontroller(valtProjekt);
+  uppdateraAllaMiniSkisser();
+
+  // Säkerställ att Three.js renderar i den nya storleken
+  setTimeout(function() {
+    if (window.CadViewer && CadViewer.resize) CadViewer.resize();
+    laddaCad3D();
+  }, 50);
+}
+
+function sparaDesign() {
+  designLageOppet = false;
+  document.getElementById('design-lage').classList.add('dold');
+  var btn = document.getElementById('btn-anpassa-design');
+  if (btn) btn.classList.remove('dold');
+
+  // Flytta tillbaka 3D-containern till ritvy-canvas
+  var canvas = document.querySelector('.ritvy-canvas');
+  var cad3d = document.getElementById('cad-3d-container');
+  if (canvas && cad3d && cad3d.parentElement !== canvas) {
+    canvas.appendChild(cad3d);
+  }
+  // Återställ ritvy-sektionen om den var öppen
+  if (ritvyOpen) {
+    document.getElementById('ritvy-sektion').classList.remove('dold');
+    setTimeout(function() {
+      if (window.CadViewer && CadViewer.resize) CadViewer.resize();
+      renderRitvy();
+    }, 50);
+  }
+  uppdateraKostnadDisplay();
+}
+
+function avbrytDesign() {
+  if (sparadeDimensioner) {
+    aktuellaB = sparadeDimensioner.b;
+    aktuellaL = sparadeDimensioner.l;
+    aktuellaH = sparadeDimensioner.h;
+    cad3dLaddad = '';
+    cadLagerData = null;
+    if (aktuelltDesign) {
+      DesignModell.andraSektion(aktuelltDesign, aktuelltDesign.sektioner[0].id,
+        { b: aktuellaB, l: aktuellaL, egenskaper: { h: aktuellaH } });
+    }
+    renderRitvy();
+    uppdateraPreview();
+  }
+  sparaDesign();
+}
+
+function uppdateraMiniSkiss(fokus) {
+  if (!valtProjekt) return;
+  var box = document.querySelector('.mini-skiss[data-fokus="' + fokus + '"]');
+  if (!box) return;
+  var url = cadServerUrl + '/cad/' + valtProjekt + '/skiss?fokus=' + fokus +
+            '&bredd=' + aktuellaB + '&langd=' + aktuellaL + '&hojd=' + aktuellaH;
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.svg) box.innerHTML = data.svg;
+    })
+    .catch(function(err) { console.error('Mini-skiss fel:', err); });
+}
+
+function uppdateraAllaMiniSkisser() {
+  if (!designLageOppet) return;
+  var fokusar = ['bredd', 'langd', 'hojd'];
+  fokusar.forEach(function(f) {
+    if (document.querySelector('.mini-skiss[data-fokus="' + f + '"]')) {
+      uppdateraMiniSkiss(f);
+    }
+  });
+}
+
+function schemalaggMiniSkiss() {
+  if (!designLageOppet) return;
+  if (miniSkissTimer) clearTimeout(miniSkissTimer);
+  miniSkissTimer = setTimeout(uppdateraAllaMiniSkisser, 120);
 }
 
 function uppdateraHojd() {
@@ -492,6 +611,7 @@ function uppdateraHojd() {
   renderRitvy();
   uppdateraRackeInfo(aktuellaH);
   uppdateraKostnadDisplay();
+  schemalaggMiniSkiss();
 }
 
 function bytRitvyStyle(stil) {
@@ -756,6 +876,68 @@ function rita3DPreview(b, l, h, vW, vH) {
 }
 
 
+// Exporterar CAD-modellen som en canny-linjeritning (svart bg, vita kanter) för ControlNet.
+// Återanvänder rita3DPreview-pipelinen men utan himmel/gräs/vinjett — bara modellens linjer.
+function exporteraCadCanny(vW, vH) {
+  if (typeof Render3D === 'undefined' || typeof byggModell === 'undefined') return Promise.resolve(null);
+  if (!aktuelltDesign || !aktuelltBerakning || !valtProjekt) return Promise.resolve(null);
+  var p = projekt[valtProjekt];
+  if (!p || !p.bygg3d) return Promise.resolve(null);
+
+  vW = vW || 1024;
+  vH = vH || 768;
+
+  // Kontextmått från första sektionen — samma som rita3DPreview
+  var sek0 = aktuelltDesign.sektioner[0];
+  var ctxB = sek0.b, ctxL = sek0.l;
+  var ctxH = aktuellaH || sek0.egenskaper.h || 0.6;
+  var ber0 = aktuelltBerakning.perSektion ? aktuelltBerakning.perSektion[sek0.id] : null;
+  if (ber0 && ber0.nockHojd) ctxH = ber0.nockHojd;
+
+  // Fast iso-vinkel (samma som preview-defaultet)
+  var ax = Math.PI / 4.5, el = Math.PI / 5.5;
+  var ctx = Render3D.skapaKontext(ctxB, ctxL, ctxH, ax, el, 1.0, vW, vH, 0, 0);
+  var palette = PALETTER.realistisk;
+  var delar = ByggGenerator.delar(aktuelltDesign, aktuelltBerakning);
+  var modellSvg = byggModell(delar, ctx, palette, 'realistisk');
+
+  // Vit bakgrund så modellens fyllnader/strokear ger tydliga övergångar för edge-detect
+  var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + vW + '" height="' + vH +
+    '" viewBox="0 0 ' + vW + ' ' + vH + '">' +
+    '<rect width="' + vW + '" height="' + vH + '" fill="white"/>' +
+    modellSvg + '</svg>';
+
+  return new Promise(function (resolve) {
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = vW; canvas.height = vH;
+      var c = canvas.getContext('2d');
+      c.drawImage(img, 0, 0);
+
+      // Sobel-light edge detect → svart bakgrund + vita kanter (canny-format för ControlNet)
+      var src = c.getImageData(0, 0, vW, vH);
+      var dst = c.createImageData(vW, vH);
+      var d = src.data, o = dst.data;
+      function lum(i) { return (d[i] + d[i + 1] + d[i + 2]) / 3; }
+      for (var y = 1; y < vH - 1; y++) {
+        for (var x = 1; x < vW - 1; x++) {
+          var i = (y * vW + x) * 4;
+          var gx = Math.abs(lum(i - 4) - lum(i + 4));
+          var gy = Math.abs(lum(i - vW * 4) - lum(i + vW * 4));
+          var v = (gx + gy) > 28 ? 255 : 0;
+          o[i] = v; o[i + 1] = v; o[i + 2] = v; o[i + 3] = 255;
+        }
+      }
+      c.putImageData(dst, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = function () { resolve(null); };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+  });
+}
+
+
 // ============================================================
 // RENDERING
 // ============================================================
@@ -786,6 +968,99 @@ function byggKort() {
       </div>
     </div>`;
   }).join('');
+
+  byggInspirationRad();
+  initScrollReveal();
+  initHurScrolly();
+}
+
+function initHurScrolly() {
+  const scrolly = document.querySelector('.hur-scrolly');
+  if (!scrolly) return;
+  const steg = scrolly.querySelectorAll('.hur-steg');
+  const lista = scrolly.querySelector('.hur-steg-lista');
+  const N = steg.length;
+  if (N === 0) return;
+  let ticking = false;
+  function uppdatera() {
+    const r = scrolly.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const total = scrolly.offsetHeight - vh;
+    let progress = total > 0 ? (-r.top) / total : 0;
+    progress = Math.max(0, Math.min(0.9999, progress));
+    // Jämna tredjedelar — varje steg får 1/N av scrollsträckan
+    const aktiv = Math.floor(progress * N);
+    steg.forEach((el, i) => el.classList.toggle('aktiv', i === aktiv));
+    // Långsam parallax: listan glider 30vh totalt (15vh ned → 15vh upp)
+    if (lista) {
+      const slideVh = (0.5 - progress) * 30;
+      lista.style.setProperty('--hur-slide', slideVh + 'vh');
+    }
+    ticking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(uppdatera); ticking = true; }
+  }, { passive: true });
+  window.addEventListener('resize', uppdatera, { passive: true });
+  uppdatera();
+}
+
+function initScrollReveal() {
+  const items = document.querySelectorAll('[data-reveal]');
+  if (!('IntersectionObserver' in window) || items.length === 0) {
+    items.forEach(el => el.classList.add('revealed'));
+    return;
+  }
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('revealed');
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.18, rootMargin: '0px 0px -60px 0px' });
+  items.forEach(el => {
+    if (!el.classList.contains('revealed')) obs.observe(el);
+  });
+}
+
+function byggInspirationRad() {
+  const trackV = document.querySelector('.marquee-vanster');
+  const trackH = document.querySelector('.marquee-hoger');
+  if (!trackV || !trackH) return;
+
+  const aktiva = sokbara.slice();
+  const renderKort = (meta) => {
+    const p = projekt[meta.id];
+    let bild = null;
+    if (p && p.inspiration && p.inspiration.galleri) {
+      for (let i = 0; i < p.inspiration.galleri.length; i++) {
+        if (p.inspiration.galleri[i].bild) { bild = p.inspiration.galleri[i].bild; break; }
+      }
+    }
+    const colors = p && p.gradientColors || projektGradients[meta.id] || projektGradients._default;
+    const fallback = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+    const bg = bild ? `url('${bild}') center/cover no-repeat` : fallback;
+    const kostnad = (p && p.inspiration && p.inspiration.kostnadRange) || meta.kostnadRange || '';
+    return `
+    <div class="inspiration-kort" onclick="visaProjekt('${meta.id}')">
+      <div class="inspiration-kort-bild" style="background: ${bg}">
+        ${!bild ? `<span class="inspiration-kort-ikon">${meta.ikon}</span>` : ''}
+        <div class="inspiration-kort-overlay">
+          <h3>${meta.namn}</h3>
+          ${kostnad ? `<span class="inspiration-kort-pris">${kostnad}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  // Rad 1: åt vänster (originalordning)
+  const radV = aktiva.map(renderKort).join('');
+  // Rad 2: åt höger (omvänd så det inte ser ut som en kopia)
+  const radH = aktiva.slice().reverse().map(renderKort).join('');
+  // Duplicera innehållet 2 gånger för seamless loop
+  trackV.innerHTML = radV + radV;
+  trackH.innerHTML = radH + radH;
 }
 
 function beraknaKostnad(p, b, l) {
@@ -809,7 +1084,12 @@ function uppdateraKostnadDisplay() {
   var l = regler ? aktuellaL : undefined;
   const kr = beraknaKostnad(p, b, l);
   const el = document.getElementById('pv-kostnad');
-  if (el) el.textContent = kr.toLocaleString('sv-SE') + ' kr';
+  if (!el) return;
+  if (!kr) { el.textContent = '— kr'; return; }
+  // Visa intervall ±15%, avrundat till närmsta 500 kr
+  var lo = Math.round(kr * 0.85 / 500) * 500;
+  var hi = Math.round(kr * 1.15 / 500) * 500;
+  el.textContent = lo.toLocaleString('sv-SE') + ' – ' + hi.toLocaleString('sv-SE') + ' kr';
 }
 
 function uppdateraDimTip(b, l) {
@@ -865,6 +1145,7 @@ function visaProjekt(id) {
   setTimeout(() => {
     lista.classList.add('dold');
     if (heroLanding) heroLanding.classList.add('dold');
+    document.querySelectorAll('.story-sektion').forEach(s => s.classList.add('dold'));
   }, 200);
 
   // Fyll hero
@@ -932,8 +1213,6 @@ function visaInspirationFas(id) {
   const p = projekt[id];
   if (!p || !p.inspiration) {
     // Inget inspirationsdata — hoppa direkt till upload
-    document.querySelector('.projekt-hero').classList.remove('dold');
-    document.querySelector('.flikar').classList.remove('dold');
     visaUploadSteg();
     return;
   }
@@ -988,6 +1267,16 @@ function visaInspirationFas(id) {
   document.getElementById('instruktioner').classList.add('dold');
   document.getElementById('inkopslista').classList.add('dold');
   document.getElementById('verktyg').classList.add('dold');
+  // Dölj banner, anpassa-knapp, designläge och ritvy så Starta projektet är ända vägen framåt
+  var banner = document.getElementById('pv-banner-bild');
+  if (banner) banner.classList.add('dold');
+  var btnAnp = document.getElementById('btn-anpassa-design');
+  if (btnAnp) btnAnp.classList.add('dold');
+  var designLage = document.getElementById('design-lage');
+  if (designLage) designLage.classList.add('dold');
+  document.getElementById('ritvy-sektion').classList.add('dold');
+  document.getElementById('pv-ai-sektion').classList.add('dold');
+  document.getElementById('pv-upload-sektion').classList.add('dold');
 
   // Stegindikator
   document.getElementById('pv-steg-indikator').classList.remove('dold');
@@ -998,13 +1287,8 @@ function startaProjektFranInspiration() {
   // Dölj inspiration
   document.getElementById('pv-inspiration').classList.add('dold');
 
-  // Visa projekt-hero, flikar och upload
-  document.querySelector('.projekt-hero').classList.remove('dold');
-  document.querySelector('.flikar').classList.remove('dold');
-
-  // Återställ flikinnehåll
-  byttFlik('instruktioner');
-
+  // Hero/flikar/instruktioner förblir dolda tills användaren har valt
+  // upload-steg, så att "Hoppa över"/"Fortsätt" är sista man kan scrolla till.
   visaUploadSteg();
   uppdateraStegIndikator(2);
 
@@ -1028,6 +1312,15 @@ function uppdateraStegIndikator(aktivtSteg) {
 // ============================================================
 
 function visaUploadSteg() {
+  // Säkerställ att inget projektinnehåll syns under upload-CTA:n
+  document.querySelector('.projekt-hero').classList.add('dold');
+  document.querySelector('.flikar').classList.add('dold');
+  document.getElementById('instruktioner').classList.add('dold');
+  document.getElementById('inkopslista').classList.add('dold');
+  document.getElementById('verktyg').classList.add('dold');
+  var banner = document.getElementById('pv-banner-bild');
+  if (banner) banner.classList.add('dold');
+
   uploadedImage = null;
   const sek = document.getElementById('pv-upload-sektion');
   const preview = document.getElementById('upload-preview');
@@ -1043,33 +1336,57 @@ function visaUploadSteg() {
   if (fel) fel.remove();
 }
 
+function avtacknaProjektInnehall() {
+  // Visa hero, flikar och instruktioner när man går vidare från upload-steget
+  document.querySelector('.projekt-hero').classList.remove('dold');
+  document.querySelector('.flikar').classList.remove('dold');
+  byttFlik('instruktioner');
+
+  // Visa banner-bild för projektet om inspirationsdata finns
+  var bannerEl = document.getElementById('pv-banner-bild');
+  var p = projekt[valtProjekt];
+  if (bannerEl && p && p.inspiration && p.inspiration.galleri) {
+    var bild = null;
+    for (var i = 0; i < p.inspiration.galleri.length; i++) {
+      if (p.inspiration.galleri[i].bild) { bild = p.inspiration.galleri[i].bild; break; }
+    }
+    if (bild) {
+      bannerEl.style.backgroundImage = 'url(' + bild + ')';
+      bannerEl.classList.remove('dold');
+    } else {
+      bannerEl.classList.add('dold');
+    }
+  }
+}
+
 function hoppaOverUpload() {
   document.getElementById('pv-upload-sektion').classList.add('dold');
-  visaVyTabs(false);
-  bytVy('3d');
+  avtacknaProjektInnehall();
+  visaDimensioner();
+  oppnaRitvy(true);
+  visaAnpassaKnapp();
   uppdateraStegIndikator(3);
 }
 
 function gaVidare() {
   document.getElementById('pv-upload-sektion').classList.add('dold');
-  visaVyTabs(true);
-  bytVy('ai');
+  avtacknaProjektInnehall();
+  document.getElementById('pv-ai-sektion').classList.remove('dold');
   visaMaskEditor();
+  visaDimensioner();
+  oppnaRitvy(true);
+  visaAnpassaKnapp();
   uppdateraStegIndikator(3);
 }
 
-function visaVyTabs(medAI) {
-  const tabs = document.getElementById('pv-vy-tabs');
-  const aiTab = document.getElementById('vy-ai');
-  tabs.classList.remove('dold');
-  if (medAI) {
-    aiTab.disabled = false;
-    aiTab.style.display = '';
-  } else {
-    aiTab.disabled = true;
-    aiTab.style.display = 'none';
-  }
+function visaAnpassaKnapp() {
+  var btn = document.getElementById('btn-anpassa-design');
+  if (btn) btn.classList.remove('dold');
+  var lage = document.getElementById('design-lage');
+  if (lage) lage.classList.add('dold');
 }
+
+function visaVyTabs(medAI) { /* borttagen — vy-tabs visar samma sak */ }
 
 function bytVy(vy) {
   // Uppdatera tab-knappar
@@ -1114,9 +1431,44 @@ function visaMaskEditor() {
 
   kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
 
-  AIVisualisering.renderMaskEditor(container, uploadedImage, function (maskBase64) {
+  AIVisualisering.renderMaskEditor(container, uploadedImage, function (maskBase64, analys) {
+    tillampaMaskAnalys(analys);
     startaAIGenerering(maskBase64);
   });
+}
+
+// Översätt mask-bbox aspect → b/l inom projektets dim-gränser. Tyst auto-applicering.
+function tillampaMaskAnalys(analys) {
+  if (!analys || !analys.ok || !valtProjekt) return;
+  var regler = ByggRegler.hamta(valtProjekt);
+  if (!regler || !regler.dim) return;
+  var dimB = regler.dim.b, dimL = regler.dim.l;
+  var std = regler.standard || { b: aktuellaB, l: aktuellaL };
+
+  // Heuristik: behåll standardarean men skala b/l så förhållandet matchar maskens bbox-aspect.
+  // aspect = bredd / höjd i pixlar → tolkas som b / l i meter.
+  var area = std.b * std.l;
+  var aspect = analys.aspect;
+  // b/l = aspect, b*l = area  →  l = sqrt(area/aspect), b = aspect*l
+  var nyL = Math.sqrt(area / aspect);
+  var nyB = aspect * nyL;
+
+  // Snäpp till steg och klampa
+  function snap(v, d) {
+    var s = Math.round(v / d.steg) * d.steg;
+    return Math.max(d.min, Math.min(d.max, Math.round(s * 100) / 100));
+  }
+  nyB = snap(nyB, dimB);
+  nyL = snap(nyL, dimL);
+
+  aktuellaB = nyB;
+  aktuellaL = nyL;
+  mattFranMask = true;
+  synkaDesign();
+  uppdateraPreview();
+
+  // Bygg om designkontrollerna så hint + nya värden visas
+  if (typeof byggDesignKontroller === 'function') byggDesignKontroller(valtProjekt);
 }
 
 function startaAIGenerering(maskBase64) {
@@ -1144,14 +1496,50 @@ function startaAIGenerering(maskBase64) {
 
   var dim = { b: aktuellaB, l: aktuellaL, h: aktuellaH };
 
-  AIVisualisering.generera(valtProjekt, dim, uploadedImage, currentMask).then(function(result) {
+  // Om måtten ändrats sedan förra genereringen — skala masken proportionellt
+  // kring sin centroid så det nya bygget får plats. FLUX målar bara inuti masken.
+  var maskPromise;
+  var maskSkalad = false;
+  if (senasteAIGenMatt &&
+      (Math.abs(senasteAIGenMatt.b - aktuellaB) > 0.001 || Math.abs(senasteAIGenMatt.l - aktuellaL) > 0.001)) {
+    var ratioX = aktuellaB / senasteAIGenMatt.b;
+    var ratioY = aktuellaL / senasteAIGenMatt.l;
+    maskSkalad = true;
+    maskPromise = AIVisualisering.skalaMaskRunt(currentMask, ratioX, ratioY);
+  } else {
+    maskPromise = Promise.resolve(currentMask);
+  }
+
+  maskPromise.then(function(maskAttSkicka) {
+    if (maskSkalad) currentMask = maskAttSkicka; // spara den uppskalade som ny baseline
+    // Generera CAD-canny från den faktiska 3D-modellen så ControlNet kan följa geometrin
+    return exporteraCadCanny(1024, 768).then(function(cadCanny) {
+      return AIVisualisering.generera(valtProjekt, dim, uploadedImage, maskAttSkicka, cadCanny);
+    });
+  }).then(function(result) {
     if (result.ok) {
-      AIVisualisering.renderBild(container, result.url);
+      AIVisualisering.renderBild(container, result.url, { maskSkalad: maskSkalad });
+      senasteAIGenMatt = { b: aktuellaB, l: aktuellaL };
+      uppdateraAiUppdateraKnapp();
     } else {
       AIVisualisering.renderFel(container, result.error);
     }
     kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
   });
+}
+
+// Visar/gömmer en "🔄 Uppdatera AI-bild med nya mått"-knapp i designkontrollerna.
+// Knappen syns när: vi har en sparad mask + en tidigare genererad bild + b/l skiljer från senaste gen.
+function uppdateraAiUppdateraKnapp() {
+  var slot = document.getElementById('ai-uppdatera-slot');
+  if (!slot) return;
+  var harDrift = currentMask && senasteAIGenMatt &&
+    (Math.abs(senasteAIGenMatt.b - aktuellaB) > 0.001 || Math.abs(senasteAIGenMatt.l - aktuellaL) > 0.001);
+  if (!harDrift) {
+    slot.innerHTML = '';
+    return;
+  }
+  slot.innerHTML = '<button class="ai-uppdatera-knapp" onclick="startaAIGenerering()">🔄 Uppdatera AI-bild med nya mått</button>';
 }
 
 function visaDimensioner() {
@@ -1253,10 +1641,11 @@ function gaaTillbaka() {
   setTimeout(() => {
     innehall.classList.add('dold');
     document.getElementById('pv-upload-sektion').classList.add('dold');
-    document.getElementById('pv-vy-tabs').classList.add('dold');
     document.getElementById('pv-ai-sektion').classList.add('dold');
     uploadedImage = null;
     currentMask = null;
+    mattFranMask = false;
+    senasteAIGenMatt = null;
     ritvyOpen = false;
     document.getElementById('ritvy-sektion').classList.add('dold');
     // Nollställ AI-bild-container
@@ -1274,6 +1663,7 @@ function gaaTillbaka() {
     // Visa hero + kortlista
     const heroLanding = document.getElementById('hero-landing');
     if (heroLanding) heroLanding.classList.remove('dold');
+    document.querySelectorAll('.story-sektion').forEach(s => s.classList.remove('dold'));
     const lista = document.getElementById('projekt-lista');
     lista.classList.remove('dold');
     requestAnimationFrame(() => lista.classList.remove('fade-ut'));
@@ -1357,6 +1747,7 @@ function renderInstruktioner(p) {
     </div>
 
     ${oppetSteg === -1 ? renderOverblick(p, prog) : renderDetalj(p, prog)}
+    <button class="skriv-ut-knapp" onclick="printaInstruktioner()">📄 Ladda ner instruktionsmanual som PDF</button>
   `;
 }
 
@@ -1517,7 +1908,7 @@ function renderInkopslista(p, b, l) {
       Uppskattat totalpris: <strong>${totalsumma.toLocaleString('sv-SE')} kr</strong>
       <span class="totalsumma-not">(exkl. verktyg)</span>
     </div>
-    <button class="skriv-ut-knapp" onclick="window.print()">Skriv ut / Spara som PDF</button>
+    <button class="skriv-ut-knapp" onclick="printaInkopslista()">📄 Ladda ner inköpslista som PDF</button>
   `;
 }
 
@@ -1534,6 +1925,18 @@ function renderVerktyg(p) {
       ${p.verktyg.bra.map(v => `<li>${v}</li>`).join('')}
     </ul>
   `;
+}
+
+function printaInkopslista() {
+  document.body.classList.add('printing-inkop');
+  window.print();
+  setTimeout(() => document.body.classList.remove('printing-inkop'), 500);
+}
+
+function printaInstruktioner() {
+  document.body.classList.add('printing-instr');
+  window.print();
+  setTimeout(() => document.body.classList.remove('printing-instr'), 500);
 }
 
 function byttFlik(flikNamn) {
