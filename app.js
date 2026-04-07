@@ -4,9 +4,9 @@
 
 let aktuellaB = 4, aktuellaL = 3;
 let uploadedImage = null;
-let currentMask = null;
-let mattFranMask = false;        // Sant tills användaren rör en slider efter mask-uppskattning
-let senasteAIGenMatt = null;     // {b,l} vid senaste lyckade AI-bildgenerering — används för att visa "uppdatera"-knapp
+let senasteAIGenMatt = null;       // {b,l} vid senaste lyckade AI-bildgenerering — används för att visa "uppdatera"-knapp
+let aktuellKameraTransform = null; // Sparas från perspektiv-editorn så vi kan re-rendera canny+mask vid slider-ändringar
+let aktuelltLjus = null; // Föreslås av bildanalysen, injiceras i FLUX-prompten vid generering
 
 // ── Designmodell ──
 let aktuelltDesign = null;
@@ -74,11 +74,7 @@ function byggSliders(projektTyp) {
   var p = projekt[projektTyp];
   var container = document.getElementById('pv-dim-layout');
   if (!container) return;
-  var html = '';
-  if (p && p.sammanfattning) {
-    html += '<p class="pv-sammanfattning">' + p.sammanfattning + '</p>';
-  }
-  container.innerHTML = html;
+  container.innerHTML = '';
 }
 
 
@@ -305,12 +301,6 @@ function uppdateraDimensioner() {
   uppdateraKostnadDisplay();
   schemalaggMiniSkiss();
 
-  // Användaren har rört en slider — mask-uppskattningen är inte längre "färsk"
-  if (mattFranMask) {
-    mattFranMask = false;
-    var hint = document.getElementById('mask-matt-hint');
-    if (hint) hint.remove();
-  }
   uppdateraAiUppdateraKnapp();
 
   var p = projekt[valtProjekt];
@@ -377,6 +367,49 @@ function oppnaRitvy(forceOpen) {
   }
 }
 
+function visaIMaterial3D(lagerNamn, btnEl) {
+  // Markera aktiv knapp
+  var alla = document.querySelectorAll('.visa-3d-knapp');
+  for (var i = 0; i < alla.length; i++) alla[i].classList.remove('aktiv');
+  if (btnEl) btnEl.classList.add('aktiv');
+
+  if (!ritvyOpen) oppnaRitvy(true);
+  // Säkerställ att 3D-vyn är aktiv (inte SVG)
+  if (typeof bytRitvyStyle === 'function') bytRitvyStyle('cad-iso');
+
+  var sektion = document.getElementById('ritvy-sektion');
+  if (sektion) sektion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  function tryFocus(forsok) {
+    if (window.CadViewer && CadViewer.isReady && CadViewer.isReady()) {
+      CadViewer.focusLayer(lagerNamn);
+      visaFokusBanner(lagerNamn);
+    } else if (forsok < 30) {
+      setTimeout(function () { tryFocus(forsok + 1); }, 200);
+    }
+  }
+  tryFocus(0);
+}
+
+function visaFokusBanner(lagerNamn) {
+  var existing = document.getElementById('fokus-banner');
+  if (existing) existing.remove();
+  var banner = document.createElement('div');
+  banner.id = 'fokus-banner';
+  banner.className = 'fokus-banner';
+  banner.innerHTML = '🔍 Fokus: <strong>' + lagerNamn + '</strong> <button onclick="avslutaFokus()">✕ Avsluta fokusläge</button>';
+  var sektion = document.getElementById('ritvy-sektion');
+  if (sektion) sektion.insertBefore(banner, sektion.firstChild);
+}
+
+function avslutaFokus() {
+  if (window.CadViewer && CadViewer.clearFocus) CadViewer.clearFocus();
+  var b = document.getElementById('fokus-banner');
+  if (b) b.remove();
+  var alla = document.querySelectorAll('.visa-3d-knapp.aktiv');
+  for (var i = 0; i < alla.length; i++) alla[i].classList.remove('aktiv');
+}
+
 function byggRitvyKontroller(projektTyp) {
   // Sliders har flyttats till designläget — ritvy-kontroller är tom nu.
   var container = document.getElementById('ritvy-kontroller');
@@ -435,9 +468,6 @@ function byggDesignKontroller(projektTyp) {
   var storlekSliders = (ui.sliders || []).filter(function(s) { return s.nyckel === 'b' || s.nyckel === 'l'; });
   if (storlekSliders.length) {
     html += '<div class="design-grupp"><h4>Storlek</h4>';
-    if (mattFranMask) {
-      html += '<div id="mask-matt-hint" class="mask-matt-hint">📐 Uppskattat från din markering på bilden</div>';
-    }
     storlekSliders.forEach(function(s) { html += sliderHtml(s, false); });
     if (ui.visaYta) {
       html += '<div class="pv-dim-summary"><div class="pv-yta-rad">';
@@ -485,8 +515,8 @@ function oppnaDesignLage() {
   sparadeDimensioner = { b: aktuellaB, l: aktuellaL, h: aktuellaH };
   designLageOppet = true;
   document.getElementById('design-lage').classList.remove('dold');
-  var btn = document.getElementById('btn-anpassa-design');
-  if (btn) btn.classList.add('dold');
+  var actions = document.getElementById('pv-actions');
+  if (actions) actions.classList.add('dold');
 
   // Flytta 3D-containern in i designläget så reglagen sitter bredvid modellen
   var slot = document.getElementById('design-3d-slot');
@@ -512,8 +542,8 @@ function oppnaDesignLage() {
 function sparaDesign() {
   designLageOppet = false;
   document.getElementById('design-lage').classList.add('dold');
-  var btn = document.getElementById('btn-anpassa-design');
-  if (btn) btn.classList.remove('dold');
+  var actions = document.getElementById('pv-actions');
+  if (actions) actions.classList.remove('dold');
 
   // Flytta tillbaka 3D-containern till ritvy-canvas
   var canvas = document.querySelector('.ritvy-canvas');
@@ -1151,7 +1181,7 @@ function visaProjekt(id) {
   // Fyll hero
   document.getElementById('pv-ikon').textContent        = meta?.ikon ?? p.ikon ?? '';
   document.getElementById('pv-namn').textContent        = p.namn;
-  document.getElementById('pv-beskrivning').textContent = meta?.beskrivning ?? '';
+  document.getElementById('pv-beskrivning').textContent = p.sammanfattning ?? meta?.beskrivning ?? '';
   document.getElementById('pv-badges').innerHTML = '';
 
   // Dölj dimensioner tills upload-steget är klart
@@ -1201,98 +1231,31 @@ function visaProjekt(id) {
   byttFlik('instruktioner');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // Visa inspirationsfas istället för upload direkt
-  visaInspirationFas(id);
+  // WOW-first: gå direkt till upload-sidan med inspirationsaccordion
+  byggInspirationsAccordion(id);
+  visaUploadSteg();
+  document.getElementById('pv-steg-indikator').classList.remove('dold');
+  uppdateraStegIndikator(2);
 }
 
 // ============================================================
 // INSPIRATION & STEGINDIKATOR
 // ============================================================
 
-function visaInspirationFas(id) {
+function byggInspirationsAccordion(id) {
   const p = projekt[id];
-  if (!p || !p.inspiration) {
-    // Inget inspirationsdata — hoppa direkt till upload
-    visaUploadSteg();
+  const header = document.getElementById('upload-mikro-header');
+  if (!p || !header) {
+    if (header) header.classList.add('dold');
     return;
   }
-
-  const insp = p.inspiration;
-  const sek = document.getElementById('pv-inspiration');
-
-  // Fyll hero-bild — använd första riktiga bilden om den finns, annars gradient
-  var heroEl = document.getElementById('insp-hero-bild');
-  var heroBild = null;
-  if (insp.galleri) {
-    for (var hi = 0; hi < insp.galleri.length; hi++) {
-      if (insp.galleri[hi].bild) { heroBild = insp.galleri[hi].bild; break; }
-    }
-  }
-  if (heroBild) {
-    heroEl.style.background = 'url(' + heroBild + ') center/cover no-repeat';
-  } else {
-    heroEl.style.background = 'linear-gradient(135deg, ' + insp.gradientColors[0] + ', ' + insp.gradientColors[1] + ')';
-  }
-
-  // Namn och budskap
-  document.getElementById('insp-namn').textContent = p.namn;
-  document.getElementById('insp-budskap').textContent = insp.budskap;
-
-  // Galleri (bilder eller placeholder-gradienter)
-  var galleri = document.getElementById('insp-galleri');
-  galleri.innerHTML = insp.galleri.filter(function(g) {
-    // Hoppa över bilden som redan visas som hero
-    return !(g.bild && g.bild === heroBild);
-  }).map(function(g) {
-    if (g.bild) {
-      return '<div class="insp-galleri-bild" style="background-image: url(' + g.bild + '); background-size: cover; background-position: center"></div>';
-    }
-    return '<div class="insp-galleri-bild" style="background: ' + g.gradient + '">' +
-      '<span class="insp-galleri-text">' + g.text + '</span></div>';
-  }).join('');
-
-  // Features (vad som ingår)
-  document.getElementById('insp-features').innerHTML = insp.inkluderar.map(function(f) {
-    return '<div class="insp-feature">\u2713 ' + f + '</div>';
-  }).join('');
-
-  // Fakta-badges
-  document.getElementById('insp-fakta').innerHTML =
-    '<span class="hero-badge">\u{1F4B0} ' + insp.kostnadRange + '</span>';
-
-  // Visa inspiration, dölj tekniska sektioner
-  sek.classList.remove('dold');
-  document.querySelector('.projekt-hero').classList.add('dold');
-  document.querySelector('.flikar').classList.add('dold');
-  document.getElementById('instruktioner').classList.add('dold');
-  document.getElementById('inkopslista').classList.add('dold');
-  document.getElementById('verktyg').classList.add('dold');
-  // Dölj banner, anpassa-knapp, designläge och ritvy så Starta projektet är ända vägen framåt
-  var banner = document.getElementById('pv-banner-bild');
-  if (banner) banner.classList.add('dold');
-  var btnAnp = document.getElementById('btn-anpassa-design');
-  if (btnAnp) btnAnp.classList.add('dold');
-  var designLage = document.getElementById('design-lage');
-  if (designLage) designLage.classList.add('dold');
-  document.getElementById('ritvy-sektion').classList.add('dold');
-  document.getElementById('pv-ai-sektion').classList.add('dold');
-  document.getElementById('pv-upload-sektion').classList.add('dold');
-
-  // Stegindikator
-  document.getElementById('pv-steg-indikator').classList.remove('dold');
-  uppdateraStegIndikator(1);
-}
-
-function startaProjektFranInspiration() {
-  // Dölj inspiration
-  document.getElementById('pv-inspiration').classList.add('dold');
-
-  // Hero/flikar/instruktioner förblir dolda tills användaren har valt
-  // upload-steg, så att "Hoppa över"/"Fortsätt" är sista man kan scrolla till.
-  visaUploadSteg();
-  uppdateraStegIndikator(2);
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  header.classList.remove('dold');
+  var ikonEl = document.getElementById('umh-ikon');
+  var namnEl = document.getElementById('umh-namn');
+  var tagEl = document.getElementById('umh-tagline');
+  if (ikonEl) ikonEl.textContent = p.ikon || '';
+  if (namnEl) namnEl.textContent = p.namn || '';
+  if (tagEl) tagEl.textContent = (p.inspiration && p.inspiration.budskap) || p.sammanfattning || '';
 }
 
 function uppdateraStegIndikator(aktivtSteg) {
@@ -1327,6 +1290,20 @@ function visaUploadSteg() {
   const dropzone = document.getElementById('upload-dropzone');
   const fortsatt = document.getElementById('upload-fortsatt');
   sek.classList.remove('dold');
+  sek.classList.remove('kompakt-upload');
+  // Återställ ev. dolda interaktiva delar från tidigare besök
+  ['.upload-knappar'].forEach(function (selKomp) {
+    var elKomp = sek.querySelector(selKomp);
+    if (elKomp) elKomp.classList.remove('dold');
+  });
+  // Återställ det kompakta inspirationsblocket (ligger utanför upload-sektion)
+  var headerKomp = document.getElementById('upload-mikro-header');
+  if (headerKomp) headerKomp.classList.remove('dold');
+  // Återställ rubrik/ingress — dynamiskt efter valt projekt
+  var rubrikEl = document.getElementById('upload-rubrik');
+  if (rubrikEl) rubrikEl.textContent = _rubrikForProjekt(valtProjekt);
+  var beskrEl = sek.querySelector('.upload-beskrivning');
+  if (beskrEl) beskrEl.textContent = 'Ladda upp en bild på din tomt — vi placerar projektet rätt åt dig så du kan finjustera det.';
   preview.classList.add('dold');
   dropzone.classList.remove('dold');
   fortsatt.disabled = true;
@@ -1368,22 +1345,181 @@ function hoppaOverUpload() {
   uppdateraStegIndikator(3);
 }
 
-function gaVidare() {
-  document.getElementById('pv-upload-sektion').classList.add('dold');
-  avtacknaProjektInnehall();
+async function gaVidare() {
+  // Visa loader-overlay direkt — användaren ska se att något händer
+  var loader = document.getElementById('bild-analys-loader');
+  if (loader) loader.classList.remove('dold');
+
+  // Försök analysera bilden via vision-API
+  var analysResultat = null;
+  try {
+    if (typeof AIVisualisering !== 'undefined' && AIVisualisering.analysera) {
+      analysResultat = await AIVisualisering.analysera(uploadedImage, valtProjekt);
+    }
+  } catch (err) {
+    console.warn('Bildanalys misslyckades, faller tillbaka på defaults:', err);
+    analysResultat = null;
+  }
+
+  // Applicera mått (clampade) eller fall tillbaka på trygga små defaults
+  var regler = ByggRegler.hamta(valtProjekt);
+  var dimRegler = regler && regler.dim ? regler.dim : null;
+  var tryggDefault = _tryggDefaultDim(valtProjekt, regler);
+
+  function clamp(v, d) {
+    if (typeof v !== 'number' || isNaN(v)) return d.def;
+    return Math.max(d.min, Math.min(d.max, v));
+  }
+
+  if (analysResultat && dimRegler) {
+    aktuellaB = clamp(analysResultat.b, { min: dimRegler.b.min, max: dimRegler.b.max, def: tryggDefault.b });
+    aktuellaL = clamp(analysResultat.l, { min: dimRegler.l.min, max: dimRegler.l.max, def: tryggDefault.l });
+    aktuellaH = clamp(analysResultat.h, { min: dimRegler.h.min, max: dimRegler.h.max, def: tryggDefault.h });
+    if (analysResultat.kameraTransform) {
+      aktuellKameraTransform = _mappaHaikuKamera(analysResultat.kameraTransform);
+    }
+    if (analysResultat.ljus) {
+      aktuelltLjus = analysResultat.ljus;
+    }
+  } else {
+    aktuellaB = tryggDefault.b;
+    aktuellaL = tryggDefault.l;
+    aktuellaH = tryggDefault.h;
+  }
+
+  if (loader) loader.classList.add('dold');
+
+  // Dölj upload-sektionens interaktiva delar (dropzone/preview/knappar/accordion)
+  // men behåll själva sektionen synlig så användaren känner att den stannar kvar
+  // på samma sida. Editorn och AI-bilden dyker upp inline under rubriken.
+  var uploadSek = document.getElementById('pv-upload-sektion');
+  if (uploadSek) {
+    uploadSek.classList.add('kompakt-upload');
+    var doljDessa = [
+      '#upload-dropzone',
+      '#upload-preview',
+      '.upload-knappar'
+    ];
+    doljDessa.forEach(function (sel) {
+      var el = uploadSek.querySelector(sel);
+      if (el) el.classList.add('dold');
+    });
+    // Dölj även det kompakta inspirationsblocket — det har gjort sitt nu
+    var headerKomp1 = document.getElementById('upload-mikro-header');
+    if (headerKomp1) headerKomp1.classList.add('dold');
+    // Uppdatera rubrik/ingress till nästa steg
+    var rubrik = document.getElementById('upload-rubrik');
+    if (rubrik) rubrik.textContent = 'Placera bygget och generera din skiss';
+    var beskr = uploadSek.querySelector('.upload-beskrivning');
+    if (beskr) beskr.textContent = 'Dra modellen på plats i bilden nedan — tryck sen Generera så skapar AI:n din skiss.';
+  }
   document.getElementById('pv-ai-sektion').classList.remove('dold');
-  visaMaskEditor();
   visaDimensioner();
-  oppnaRitvy(true);
-  visaAnpassaKnapp();
+  // Håll 3D-ritvyn och anpassa-knapparna dolda tills användaren fått se AI-bilden.
+  var ritvy = document.getElementById('ritvy-sektion');
+  if (ritvy) ritvy.classList.add('dold');
+  var actionsEl = document.getElementById('pv-actions');
+  if (actionsEl) actionsEl.classList.add('dold');
   uppdateraStegIndikator(3);
+  // Skapa editorn sist så ai-bild-container har sin slutliga bredd
+  requestAnimationFrame(function () { visaPerspektivEditor(); });
+}
+
+// Mappar Haikus kameraförslag {yaw, pitch (grader), x, y (-1..1)} till
+// perspektiveditorns interna format {rotAz, rotEl, roll, zoom, offsetX, offsetY}.
+// yaw/pitch konverteras till radianer; x/y normaliseras mot bildens display-storlek
+// senare i editorn (offsetX/Y mäts i display-pixlar). Vi sätter dem till 0 här —
+// användaren kan dra modellen på plats. yaw/pitch ger redan rätt vinkel.
+function _mappaHaikuKamera(haiku) {
+  if (!haiku || typeof haiku !== 'object') return null;
+  var DEG = Math.PI / 180;
+  var yaw = typeof haiku.yaw === 'number' ? haiku.yaw : -45;
+  var pitch = typeof haiku.pitch === 'number' ? haiku.pitch : -20;
+  // Klampa till rimliga intervall så vi inte hamnar under marken eller bakom kameran
+  yaw = Math.max(-180, Math.min(180, yaw));
+  pitch = Math.max(-80, Math.min(10, pitch));
+  return {
+    rotAz: yaw * DEG,
+    rotEl: pitch * DEG,
+    roll: 0,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0
+  };
+}
+
+// Bygger en naturlig svensk rubrik: "Få en första skiss av din altan".
+// Faller tillbaka på "ditt projekt" om projekttypen är okänd.
+function _rubrikForProjekt(projektTyp) {
+  var mapping = {
+    altan:    'din altan',
+    lekstuga: 'din lekstuga',
+    pergola:  'din pergola',
+    forrad:   'ditt förråd',
+    plank:    'ditt plank',
+    spalje:   'din spaljé',
+    garage:   'ditt garage',
+    carport:  'din carport',
+    vaxthus:  'ditt växthus',
+    staket:   'ditt staket'
+  };
+  var fras = mapping[projektTyp] || 'ditt projekt';
+  return 'Få en första skiss av ' + fras;
+}
+
+function _tryggDefaultDim(projektTyp, regler) {
+  var safe = {
+    altan:    { b: 3,   l: 3,   h: 0.4 },
+    lekstuga: { b: 2,   l: 2,   h: 2.0 },
+    pergola:  { b: 2.5, l: 2.5, h: 2.2 },
+  };
+  if (safe[projektTyp]) return safe[projektTyp];
+  if (regler && regler.standard) return { b: regler.standard.b, l: regler.standard.l, h: regler.standard.h };
+  return { b: 3, l: 3, h: 2 };
 }
 
 function visaAnpassaKnapp() {
-  var btn = document.getElementById('btn-anpassa-design');
-  if (btn) btn.classList.remove('dold');
+  var actions = document.getElementById('pv-actions');
+  if (actions) actions.classList.remove('dold');
   var lage = document.getElementById('design-lage');
   if (lage) lage.classList.add('dold');
+}
+
+// Startar nya AI-flow: upload först, sen perspektiv-editor.
+function startaPerspektivFlow() {
+  // Stäng ev. öppet anpassa-läge så upload-vyn inte hamnar dold under det
+  var dl = document.getElementById('design-lage');
+  if (dl) dl.classList.add('dold');
+  if (typeof designLageOppet !== 'undefined') designLageOppet = false;
+  var actions = document.getElementById('pv-actions');
+  if (actions) actions.classList.add('dold');
+  var aiSek = document.getElementById('pv-ai-sektion');
+  if (aiSek) aiSek.classList.add('dold');
+  var ritvy = document.getElementById('ritvy-sektion');
+  if (ritvy) ritvy.classList.add('dold');
+
+  // Återanvänd befintlig upload-vy men dirigera dess "Fortsätt" till perspektiv-editorn.
+  document.querySelector('.projekt-hero').classList.add('dold');
+  document.querySelector('.flikar').classList.add('dold');
+  document.getElementById('instruktioner').classList.add('dold');
+  document.getElementById('inkopslista').classList.add('dold');
+  document.getElementById('verktyg').classList.add('dold');
+  var banner = document.getElementById('pv-banner-bild');
+  if (banner) banner.classList.add('dold');
+
+  uploadedImage = null;
+  aktuellKameraTransform = null;
+  var sek = document.getElementById('pv-upload-sektion');
+  var preview = document.getElementById('upload-preview');
+  var dropzone = document.getElementById('upload-dropzone');
+  var fortsatt = document.getElementById('upload-fortsatt');
+  sek.classList.remove('dold');
+  preview.classList.add('dold');
+  dropzone.classList.remove('dold');
+  fortsatt.disabled = true;
+  document.getElementById('upload-input').value = '';
+  var fel = sek.querySelector('.upload-fel');
+  if (fel) fel.remove();
 }
 
 function visaVyTabs(medAI) { /* borttagen — vy-tabs visar samma sak */ }
@@ -1418,11 +1554,11 @@ function bytVy(vy) {
   }
 }
 
-function visaMaskEditor() {
+function visaPerspektivEditor() {
   if (typeof AIVisualisering === 'undefined' || !uploadedImage) return;
   AIVisualisering.init();
-  const container = document.getElementById('ai-bild-container');
-  const kontroller = document.getElementById('ai-kontroller');
+  var container = document.getElementById('ai-bild-container');
+  var kontroller = document.getElementById('ai-kontroller');
 
   if (!AIVisualisering.kontrolleraKostnad()) {
     AIVisualisering.renderSektion();
@@ -1431,58 +1567,30 @@ function visaMaskEditor() {
 
   kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
 
-  AIVisualisering.renderMaskEditor(container, uploadedImage, function (maskBase64, analys) {
-    tillampaMaskAnalys(analys);
-    startaAIGenerering(maskBase64);
-  });
+  AIVisualisering.renderPerspektivEditor(
+    container, uploadedImage, aktuelltDesign, aktuelltBerakning,
+    function onGenerate(result) {
+      aktuellKameraTransform = result.kameraTransform;
+      startaAIGenerering(result.maskDataUrl, result.cadCannyDataUrl);
+    },
+    function onAvbryt() {
+      AIVisualisering.renderSektion();
+    },
+    aktuellKameraTransform // Förvald vinkel från Haiku-analysen om den finns
+  );
 }
 
-// Översätt mask-bbox aspect → b/l inom projektets dim-gränser. Tyst auto-applicering.
-function tillampaMaskAnalys(analys) {
-  if (!analys || !analys.ok || !valtProjekt) return;
-  var regler = ByggRegler.hamta(valtProjekt);
-  if (!regler || !regler.dim) return;
-  var dimB = regler.dim.b, dimL = regler.dim.l;
-  var std = regler.standard || { b: aktuellaB, l: aktuellaL };
+// Behåll gammalt namn som alias så ev. inline-onclick fortfarande funkar
+function visaMaskEditor() { visaPerspektivEditor(); }
 
-  // Heuristik: behåll standardarean men skala b/l så förhållandet matchar maskens bbox-aspect.
-  // aspect = bredd / höjd i pixlar → tolkas som b / l i meter.
-  var area = std.b * std.l;
-  var aspect = analys.aspect;
-  // b/l = aspect, b*l = area  →  l = sqrt(area/aspect), b = aspect*l
-  var nyL = Math.sqrt(area / aspect);
-  var nyB = aspect * nyL;
-
-  // Snäpp till steg och klampa
-  function snap(v, d) {
-    var s = Math.round(v / d.steg) * d.steg;
-    return Math.max(d.min, Math.min(d.max, Math.round(s * 100) / 100));
-  }
-  nyB = snap(nyB, dimB);
-  nyL = snap(nyL, dimL);
-
-  aktuellaB = nyB;
-  aktuellaL = nyL;
-  mattFranMask = true;
-  synkaDesign();
-  uppdateraPreview();
-
-  // Bygg om designkontrollerna så hint + nya värden visas
-  if (typeof byggDesignKontroller === 'function') byggDesignKontroller(valtProjekt);
-}
-
-function startaAIGenerering(maskBase64) {
+async function startaAIGenerering(maskDataUrl, cadCannyDataUrl) {
   if (typeof AIVisualisering === 'undefined') return;
   AIVisualisering.init();
-  const container = document.getElementById('ai-bild-container');
-  const kontroller = document.getElementById('ai-kontroller');
+  var container = document.getElementById('ai-bild-container');
+  var kontroller = document.getElementById('ai-kontroller');
 
-  if (maskBase64) {
-    currentMask = maskBase64;
-  }
-
-  if (!currentMask) {
-    visaMaskEditor();
+  if (!uploadedImage || !aktuellKameraTransform) {
+    visaPerspektivEditor();
     return;
   }
 
@@ -1496,36 +1604,50 @@ function startaAIGenerering(maskBase64) {
 
   var dim = { b: aktuellaB, l: aktuellaL, h: aktuellaH };
 
-  // Om måtten ändrats sedan förra genereringen — skala masken proportionellt
-  // kring sin centroid så det nya bygget får plats. FLUX målar bara inuti masken.
-  var maskPromise;
-  var maskSkalad = false;
-  if (senasteAIGenMatt &&
-      (Math.abs(senasteAIGenMatt.b - aktuellaB) > 0.001 || Math.abs(senasteAIGenMatt.l - aktuellaL) > 0.001)) {
-    var ratioX = aktuellaB / senasteAIGenMatt.b;
-    var ratioY = aktuellaL / senasteAIGenMatt.l;
-    maskSkalad = true;
-    maskPromise = AIVisualisering.skalaMaskRunt(currentMask, ratioX, ratioY);
-  } else {
-    maskPromise = Promise.resolve(currentMask);
+  // Om assets inte skickades med (t.ex. "Uppdatera AI-bild"-knappen efter slider-ändring),
+  // re-rendera canny+mask från nuvarande design med samma kameraTransform.
+  if (!maskDataUrl || !cadCannyDataUrl) {
+    var assets = await AIVisualisering.genereraCannyOchMask(
+      uploadedImage, aktuelltDesign, aktuelltBerakning, aktuellKameraTransform
+    );
+    maskDataUrl = assets.maskDataUrl;
+    cadCannyDataUrl = assets.cadCannyDataUrl;
   }
+  var result = await AIVisualisering.generera(valtProjekt, dim, uploadedImage, maskDataUrl, cadCannyDataUrl, aktuelltLjus);
+  if (result.ok) {
+    AIVisualisering.renderBild(container, result.url, {});
+    senasteAIGenMatt = { b: aktuellaB, l: aktuellaL };
+    uppdateraAiUppdateraKnapp();
+    visaAnpassaKonstruktionKnapp();
+  } else {
+    AIVisualisering.renderFel(container, result.error);
+  }
+  kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
+}
 
-  maskPromise.then(function(maskAttSkicka) {
-    if (maskSkalad) currentMask = maskAttSkicka; // spara den uppskalade som ny baseline
-    // Generera CAD-canny från den faktiska 3D-modellen så ControlNet kan följa geometrin
-    return exporteraCadCanny(1024, 768).then(function(cadCanny) {
-      return AIVisualisering.generera(valtProjekt, dim, uploadedImage, maskAttSkicka, cadCanny);
-    });
-  }).then(function(result) {
-    if (result.ok) {
-      AIVisualisering.renderBild(container, result.url, { maskSkalad: maskSkalad });
-      senasteAIGenMatt = { b: aktuellaB, l: aktuellaL };
-      uppdateraAiUppdateraKnapp();
-    } else {
-      AIVisualisering.renderFel(container, result.error);
-    }
-    kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
-  });
+// Visar en tydlig primär-knapp under AI-bilden som tar användaren vidare
+// till 3D-ritvyn + slider-anpassning. Tanken: WOW-bilden först, sen detaljer.
+function visaAnpassaKonstruktionKnapp() {
+  var container = document.getElementById('ai-bild-container');
+  if (!container) return;
+  // Ta bort ev. gammal knapp först så vi inte dubblerar vid re-generering
+  var gammal = document.getElementById('anpassa-konstruktion-knapp');
+  if (gammal) gammal.remove();
+  var btn = document.createElement('button');
+  btn.id = 'anpassa-konstruktion-knapp';
+  btn.className = 'anpassa-konstruktion-knapp';
+  btn.textContent = '✏️ Anpassa konstruktion →';
+  btn.onclick = gaTillAnpassning;
+  container.appendChild(btn);
+}
+
+function gaTillAnpassning() {
+  // Först nu "avtäcks" projektvyn (hero, flikar, instruktioner) och 3D-ritvyn
+  avtacknaProjektInnehall();
+  oppnaRitvy(true);
+  visaAnpassaKnapp();
+  var ritvy = document.getElementById('ritvy-sektion');
+  if (ritvy) ritvy.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Visar/gömmer en "🔄 Uppdatera AI-bild med nya mått"-knapp i designkontrollerna.
@@ -1533,7 +1655,7 @@ function startaAIGenerering(maskBase64) {
 function uppdateraAiUppdateraKnapp() {
   var slot = document.getElementById('ai-uppdatera-slot');
   if (!slot) return;
-  var harDrift = currentMask && senasteAIGenMatt &&
+  var harDrift = aktuellKameraTransform && senasteAIGenMatt &&
     (Math.abs(senasteAIGenMatt.b - aktuellaB) > 0.001 || Math.abs(senasteAIGenMatt.l - aktuellaL) > 0.001);
   if (!harDrift) {
     slot.innerHTML = '';
@@ -1560,7 +1682,7 @@ function visaDimensioner() {
     var dr = ByggRegler.tillampa(aktuelltDesign);
     aktuelltBerakning = dr.berakning;
 
-    dimSek.classList.remove('dold');
+    dimSek.classList.add('dold');
     uppdateraPreview();
     uppdateraDimTip(aktuellaB, aktuellaL);
     uppdateraRackeInfo(aktuellaH);
@@ -1614,24 +1736,35 @@ function hanteraUpload(file) {
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    // Normalisera EXIF-orientering genom att rita om via canvas
-    var tmpImg = new Image();
-    tmpImg.onload = function() {
+  // Använd createImageBitmap med imageOrientation: 'from-image' så EXIF-rotation
+  // bakas in i pixlarna. Annars matchar inte natural-dimensioner det användaren ser
+  // i editorn, och masken/canny:n hamnar i fel orientering relativt FLUX-input.
+  function fardig(dataUrl) {
+    uploadedImage = dataUrl;
+    document.getElementById('upload-bild').src = uploadedImage;
+    document.getElementById('upload-dropzone').classList.add('dold');
+    document.getElementById('upload-preview').classList.remove('dold');
+    document.getElementById('upload-fortsatt').disabled = false;
+  }
+
+  if (typeof createImageBitmap === 'function') {
+    createImageBitmap(file, { imageOrientation: 'from-image' }).then(function(bmp) {
       var c = document.createElement('canvas');
-      c.width = tmpImg.naturalWidth;
-      c.height = tmpImg.naturalHeight;
-      c.getContext('2d').drawImage(tmpImg, 0, 0);
-      uploadedImage = c.toDataURL('image/jpeg', 0.92);
-      document.getElementById('upload-bild').src = uploadedImage;
-      document.getElementById('upload-dropzone').classList.add('dold');
-      document.getElementById('upload-preview').classList.remove('dold');
-      document.getElementById('upload-fortsatt').disabled = false;
-    };
-    tmpImg.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+      c.width = bmp.width;
+      c.height = bmp.height;
+      c.getContext('2d').drawImage(bmp, 0, 0);
+      fardig(c.toDataURL('image/jpeg', 0.92));
+    }).catch(function() {
+      // Fallback: läs som vanligt
+      var r = new FileReader();
+      r.onload = function(e) { fardig(e.target.result); };
+      r.readAsDataURL(file);
+    });
+  } else {
+    var r = new FileReader();
+    r.onload = function(e) { fardig(e.target.result); };
+    r.readAsDataURL(file);
+  }
 }
 
 function gaaTillbaka() {
@@ -1642,18 +1775,18 @@ function gaaTillbaka() {
     innehall.classList.add('dold');
     document.getElementById('pv-upload-sektion').classList.add('dold');
     document.getElementById('pv-ai-sektion').classList.add('dold');
+    var headerKomp3 = document.getElementById('upload-mikro-header');
+    if (headerKomp3) headerKomp3.classList.add('dold');
     uploadedImage = null;
-    currentMask = null;
-    mattFranMask = false;
     senasteAIGenMatt = null;
+    aktuellKameraTransform = null;
     ritvyOpen = false;
     document.getElementById('ritvy-sektion').classList.add('dold');
     // Nollställ AI-bild-container
     var aiCont = document.getElementById('ai-bild-container');
     if (aiCont) aiCont.innerHTML = '<div class="ai-placeholder"><span class="ai-placeholder-ikon">\u2728</span><p>Din AI-visualisering visas här</p></div>';
 
-    // Dölj inspiration och stegindikator
-    document.getElementById('pv-inspiration').classList.add('dold');
+    // Dölj stegindikator
     document.getElementById('pv-steg-indikator').classList.add('dold');
     // Återställ hero och flikar till synliga (för nästa projektbesök)
     document.querySelector('.projekt-hero').classList.remove('dold');
@@ -1879,12 +2012,13 @@ function renderInkopslista(p, b, l) {
   if (!p.inkop) { el.innerHTML = '<p style="color:#888;padding:20px;">Inköpslista saknas för detta projekt.</p>'; return; }
   const rader = p.inkop.map(r => {
     if (r.kategori) {
-      return `<tr><td colspan="6" class="kategori">${r.kategori}</td></tr>`;
+      return `<tr><td colspan="7" class="kategori">${r.kategori}</td></tr>`;
     }
     const visAntal  = harDim && r.skala ? skalaAntal(r.antal, r.skala, b, l) : r.antal;
     const visTotalt = harDim && r.skala ? skalaTotalt(r.totalt, r.skala, b, l) : r.totalt;
     if (visTotalt) totalsumma += visTotalt;
     const andrad = harDim && r.skala && r.skala !== 'fast' && visAntal !== r.antal;
+    const visa3d = r.lager ? `<button class="visa-3d-knapp" data-lager="${r.lager}" onclick="visaIMaterial3D('${r.lager}', this)">Visa i 3D</button>` : '';
     return `<tr>
       <td>${r.namn}</td>
       <td>${r.dim}</td>
@@ -1892,15 +2026,16 @@ function renderInkopslista(p, b, l) {
       <td>${r.enhet}</td>
       <td>${r.not}</td>
       <td class="pris-cell">${visTotalt ? visTotalt.toLocaleString('sv-SE') + ' kr' : '\u2014'}</td>
+      <td class="visa-3d-cell">${visa3d}</td>
     </tr>`;
   }).join('');
 
   el.innerHTML = `
     <h2>Ink\u00f6pslista \u2014 ${p.namn}${harDim ? ` <span class="dim-etikett">${b} \u00d7 ${l} m</span>` : ''}</h2>
-    <p class="info-text">Ungef\u00e4rliga priser. K\u00f6p alltid 10% extra f\u00f6r spill.</p>
+    <p class="info-text">Ungef\u00e4rliga priser.</p>
     <table class="lista-tabell">
       <thead>
-        <tr><th>Material</th><th>Dimension</th><th>Antal</th><th>Enhet</th><th>Notering</th><th>Ca pris</th></tr>
+        <tr><th>Material</th><th>Dimension</th><th>Antal</th><th>Enhet</th><th>Notering</th><th>Ca pris</th><th></th></tr>
       </thead>
       <tbody>${rader}</tbody>
     </table>
@@ -1945,9 +2080,12 @@ function byttFlik(flikNamn) {
   document.querySelectorAll('.flik').forEach(knapp => {
     knapp.classList.toggle('aktiv-flik', knapp.getAttribute('onclick').includes(flikNamn));
   });
-  // Uppdatera stegindikator: instruktioner = bygg-fasen (bara om vi passerat inspirationen)
-  if (flikNamn === 'instruktioner' && valtProjekt && document.getElementById('pv-inspiration').classList.contains('dold')) {
-    uppdateraStegIndikator(4);
+  // Uppdatera stegindikator: instruktioner = bygg-fasen (bara om upload-vyn inte längre är synlig)
+  if (flikNamn === 'instruktioner' && valtProjekt) {
+    var uploadSek = document.getElementById('pv-upload-sektion');
+    if (uploadSek && uploadSek.classList.contains('dold')) {
+      uppdateraStegIndikator(4);
+    }
   }
 }
 

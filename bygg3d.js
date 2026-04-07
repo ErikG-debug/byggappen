@@ -670,6 +670,46 @@ function byggModell(delar, ctx, palette, style) {
   return allItems.map(item => item.svg).join('') + rackeSvg;
 }
 
+// ── Wireframe-variant: samma SVG-pipeline men allt fill=none, stroke=white ──
+function _wireframeify(obj) {
+  if (Array.isArray(obj)) return obj.map(_wireframeify);
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const k in obj) {
+      if (/stroke/i.test(k)) out[k] = '#ffffff';
+      else out[k] = _wireframeify(obj[k]);
+    }
+    return out;
+  }
+  if (typeof obj === 'string') return 'none';
+  return obj;
+}
+
+const _WIREFRAME_PALETTE = _wireframeify(PALETTER.teknisk);
+
+function byggModellWireframe(delar, ctx) {
+  return byggModell(delar, ctx, _WIREFRAME_PALETTE, 'teknisk');
+}
+
+// Silhuett: samma geometri men fyllda vita ytor (för auto-mask)
+const _SILHOUETTE_PALETTE = (function () {
+  function fill(obj) {
+    if (Array.isArray(obj)) return obj.map(fill);
+    if (obj && typeof obj === 'object') {
+      const out = {};
+      for (const k in obj) out[k] = fill(obj[k]);
+      return out;
+    }
+    if (typeof obj === 'string') return '#ffffff';
+    return obj;
+  }
+  return fill(PALETTER.teknisk);
+})();
+
+function byggModellSilhouette(delar, ctx) {
+  return byggModell(delar, ctx, _SILHOUETTE_PALETTE, 'teknisk');
+}
+
 // ── Legacy SVG render-hjälpare (privata, för preview) ──
 
 function _renderBoxSVG(del, ctx, palette) {

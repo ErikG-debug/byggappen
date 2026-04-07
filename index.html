@@ -110,13 +110,10 @@
 
       <button class="tillbaka-knapp" onclick="gaaTillbaka()">← Alla projekt</button>
 
-      <!-- Banner-bild för projektet (visas på upload/planera-stegen, inte inspiration) -->
-      <div id="pv-banner-bild" class="pv-banner-bild dold"></div>
-
-      <!-- Stegindikator -->
+      <!-- Stegindikator (alltid över ev. bild för konsistent layout) -->
       <div id="pv-steg-indikator" class="steg-indikator dold">
         <div class="steg-indikator-item aktivt-steg" data-steg="1">
-          <span class="steg-nummer">1</span><span class="steg-etikett">Inspiration</span>
+          <span class="steg-nummer">1</span><span class="steg-etikett">Välj</span>
         </div>
         <div class="steg-indikator-linje"></div>
         <div class="steg-indikator-item" data-steg="2">
@@ -124,7 +121,7 @@
         </div>
         <div class="steg-indikator-linje"></div>
         <div class="steg-indikator-item" data-steg="3">
-          <span class="steg-nummer">3</span><span class="steg-etikett">Planera</span>
+          <span class="steg-nummer">3</span><span class="steg-etikett">Material</span>
         </div>
         <div class="steg-indikator-linje"></div>
         <div class="steg-indikator-item" data-steg="4">
@@ -132,26 +129,9 @@
         </div>
       </div>
 
-      <!-- Inspiration (visas först, dold som standard) -->
-      <div id="pv-inspiration" class="inspiration-sektion dold">
-        <div class="inspiration-hero-bild" id="insp-hero-bild"></div>
-        <div class="inspiration-innehall">
-          <h1 id="insp-namn" class="inspiration-titel"></h1>
-          <p id="insp-budskap" class="inspiration-budskap"></p>
+      <!-- Banner-bild för projektet (visas på upload/planera-stegen, inte inspiration) -->
+      <div id="pv-banner-bild" class="pv-banner-bild dold"></div>
 
-          <div class="inspiration-galleri" id="insp-galleri"></div>
-
-          <div class="inspiration-overblick">
-            <h3>Det här ingår</h3>
-            <div class="inspiration-features" id="insp-features"></div>
-            <div class="inspiration-fakta" id="insp-fakta"></div>
-          </div>
-
-          <button class="inspiration-cta" onclick="startaProjektFranInspiration()">
-            Starta projektet →
-          </button>
-        </div>
-      </div>
 
       <!-- Hero -->
       <div class="projekt-hero">
@@ -170,11 +150,19 @@
         </div>
       </div>
 
+      <!-- Mikro-header för upload-steget — minimal projektidentitet -->
+      <div id="upload-mikro-header" class="upload-mikro-header dold">
+        <span class="umh-ikon" id="umh-ikon"></span>
+        <h2 class="umh-namn" id="umh-namn"></h2>
+        <p class="umh-tagline" id="umh-tagline"></p>
+        <p class="umh-instruktion">Ladda upp ett foto på din tomt så skapar AI:n en första skiss av hur projektet kan se ut hemma hos dig.</p>
+      </div>
+
       <!-- Bilduppladdning (steg 2) -->
       <div id="pv-upload-sektion" class="upload-sektion dold">
         <div class="upload-innehall">
-          <h2>Se hur det kan se ut hemma hos dig</h2>
-          <p class="upload-beskrivning">Ladda upp en bild på din tomt så skapar vi en realistisk visualisering av ditt projekt i din trädgård.</p>
+          <h2 id="upload-rubrik" class="dold">Få en första skiss av ditt projekt</h2>
+          <p class="upload-beskrivning dold">Ladda upp en bild på din tomt — vi placerar projektet rätt åt dig så du kan finjustera det.</p>
 
           <div class="upload-yta" id="upload-dropzone">
             <div class="upload-ikon">📷</div>
@@ -191,23 +179,14 @@
           </div>
 
           <div class="upload-knappar">
-            <button class="upload-fortsatt" id="upload-fortsatt" onclick="gaVidare()" disabled>Fortsätt med denna bild</button>
-            <button class="upload-hoppa" onclick="hoppaOverUpload()">Hoppa över</button>
+            <button class="upload-fortsatt" id="upload-fortsatt" onclick="gaVidare()" disabled>Skapa första skiss →</button>
+            <button class="upload-hoppa" onclick="hoppaOverUpload()">Jag har ingen bild — fortsätt direkt till design</button>
           </div>
-        </div>
-      </div>
 
-      <!-- AI-visualisering -->
-      <div id="pv-ai-sektion" class="ai-sektion dold">
-        <div class="ai-innehall">
-          <div class="ai-bild-container" id="ai-bild-container">
-            <div class="ai-placeholder">
-              <span class="ai-placeholder-ikon">✨</span>
-              <p>Din AI-visualisering visas här</p>
-            </div>
-          </div>
-          <div class="ai-kontroller" id="ai-kontroller">
-            <p class="ai-kostnad-info" id="ai-kostnad-info"></p>
+          <!-- Loader-overlay för bildanalys -->
+          <div id="bild-analys-loader" class="bild-analys-loader dold">
+            <div class="bild-analys-spinner"></div>
+            <p>Analyserar din bild...</p>
           </div>
         </div>
       </div>
@@ -217,10 +196,26 @@
         <div id="pv-dim-layout" class="pv-dim-layout"></div>
       </div>
 
-      <!-- Anpassa design-knapp + designläge -->
-      <button id="btn-anpassa-design" class="btn-anpassa dold" onclick="oppnaDesignLage()">
-        ✏️ Anpassa design
-      </button>
+      <!-- Knapprad: Anpassa design + Visualisera hemma -->
+      <div id="pv-actions" class="pv-actions dold">
+        <button id="btn-anpassa-design" class="btn-anpassa" onclick="oppnaDesignLage()">
+          ✏️ Anpassa design
+        </button>
+        <button id="btn-cta-visualisera" class="btn-cta-visualisera" onclick="startaPerspektivFlow()">
+          📷 Visualisera hemma hos mig
+        </button>
+      </div>
+
+      <!-- AI-visualisering (visas först när användaren startat AI-flödet) -->
+      <div id="pv-ai-sektion" class="ai-sektion dold">
+        <div class="ai-innehall">
+          <div class="ai-bild-container" id="ai-bild-container"></div>
+          <p class="ai-skiss-undertext">Det här är en första skiss — finjustera måtten nedan så uppdateras visualiseringen.</p>
+          <div class="ai-kontroller" id="ai-kontroller">
+            <p class="ai-kostnad-info" id="ai-kostnad-info"></p>
+          </div>
+        </div>
+      </div>
 
       <div id="design-lage" class="design-lage dold">
         <div class="design-header">

@@ -550,6 +550,27 @@ main:has(#projekt-innehall.synlig) {
 }
 
 /* === Designläge === */
+.anpassa-konstruktion-knapp {
+  display: block;
+  margin: 24px auto 8px;
+  padding: 16px 36px;
+  background: #2b6a3a;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(43, 106, 58, 0.25);
+  transition: all 0.2s ease;
+}
+.anpassa-konstruktion-knapp:hover {
+  background: #245a32;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(43, 106, 58, 0.32);
+}
+
 .btn-anpassa {
   display: block;
   margin: 24px auto;
@@ -1389,8 +1410,52 @@ ol.steg-substeg li {
   .hero-content .sok-input { font-size: 1rem; padding: 15px 0; }
 }
 
+.visa-3d-knapp {
+  background: transparent;
+  color: #6a7a6a;
+  border: 1px solid #cfd5cc;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.visa-3d-knapp:hover { background: #f0efe8; color: #1a3a24; border-color: #1a3a24; }
+.visa-3d-knapp.aktiv {
+  background: #1a3a24;
+  color: #fff;
+  border-color: #1a3a24;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.visa-3d-cell { text-align: right; }
+
+.fokus-banner {
+  background: #fff8d0;
+  border: 1px solid #e6c200;
+  color: #4a3a00;
+  padding: 12px 18px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+.fokus-banner button {
+  background: #4a3a00;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.fokus-banner button:hover { background: #6a5a20; }
+
 @media print {
-  header, .hero-landing, .projekt-lista, .flikar, .skriv-ut-knapp, .story-sektion { display: none; }
+  header, .hero-landing, .projekt-lista, .flikar, .skriv-ut-knapp, .story-sektion, .visa-3d-knapp, .visa-3d-cell, .fokus-banner { display: none; }
   #projekt-innehall { display: block !important; opacity: 1 !important; transform: none !important; }
   #verktyg { display: none !important; }
 
@@ -1706,36 +1771,100 @@ ol.steg-substeg li {
 
 .upload-sektion {
   background: white;
-  border-radius: 16px;
+  border-radius: 0 0 16px 16px;
   border: 1.5px solid #e8e8e8;
-  padding: 32px 24px;
+  border-top: none;
+  padding: 22px 32px 28px;
+  margin-top: 0;
   margin-bottom: 28px;
   animation: fadein 0.25s ease;
 }
+/* Om upload-sektion visas utan mikro-headern (t.ex. perspektiv-editorn) — runda hela */
+.upload-mikro-header.dold + .upload-sektion {
+  border-radius: 16px;
+  border-top: 1.5px solid #e8e8e8;
+}
 
 .upload-innehall {
-  max-width: 520px;
+  max-width: 720px;
   margin: 0 auto;
   text-align: center;
 }
 
 .upload-innehall h2 {
-  font-size: 1.4rem;
+  font-size: 1.75rem;
+  font-weight: 700;
   color: #1a1a1a;
-  margin-bottom: 8px;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
 }
 
 .upload-beskrivning {
   font-size: 0.95rem;
   color: #666;
   line-height: 1.5;
-  margin-bottom: 24px;
+  margin: 0 0 14px;
+}
+
+.upload-mikro-header {
+  background: white;
+  color: inherit;
+  font-family: inherit;
+  position: static;
+  box-shadow: none;
+  text-align: left;
+  margin: 32px auto 0;
+  max-width: none;
+  padding: 28px 32px 22px;
+  border-radius: 16px 16px 0 0;
+  border: 1.5px solid #e8e8e8;
+  border-bottom: none;
+}
+.upload-mikro-header .umh-ikon {
+  display: inline-block;
+  font-size: 1.4rem;
+  margin-right: 8px;
+  vertical-align: middle;
+  opacity: 0.85;
+}
+.upload-mikro-header .umh-namn {
+  display: inline;
+  font-family: inherit;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  vertical-align: middle;
+}
+.upload-mikro-header .umh-tagline {
+  font-family: inherit;
+  font-size: 0.98rem;
+  color: #6b7a6f;
+  margin: 10px 0 14px;
+  line-height: 1.55;
+}
+.upload-mikro-header .umh-instruktion {
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: #8a8378;
+  margin: 0;
+  line-height: 1.55;
+  padding-top: 14px;
+  border-top: 1px solid #efece4;
 }
 
 .upload-yta {
-  border: 2px dashed #c8c8c8;
-  border-radius: 12px;
-  padding: 36px 20px;
+  border: 1.5px dashed #c8c2b2;
+  border-radius: 14px;
+  padding: 70px 24px;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f7faf7;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
@@ -1751,8 +1880,9 @@ ol.steg-substeg li {
 }
 
 .upload-ikon {
-  font-size: 2.4rem;
-  margin-bottom: 10px;
+  font-size: 4rem;
+  margin-bottom: 14px;
+  opacity: 0.85;
 }
 
 .upload-ledtext {
@@ -1821,11 +1951,11 @@ ol.steg-substeg li {
 }
 
 .upload-knappar {
-  margin-top: 24px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .upload-fortsatt {
@@ -1852,15 +1982,17 @@ ol.steg-substeg li {
 .upload-hoppa {
   background: none;
   border: none;
-  color: #999;
+  color: #6b7a6f;
   font-size: 0.9rem;
   cursor: pointer;
   padding: 6px 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   transition: color 0.15s;
 }
 
 .upload-hoppa:hover {
-  color: #555;
+  color: #2b6a3a;
 }
 
 .upload-fel {
@@ -2397,123 +2529,145 @@ ol.steg-substeg li {
 }
 
 /* ============================================================
-   INSPIRATIONSSEKTION
+   INSPIRATIONSACCORDION (kollapsad info ovanför upload)
    ============================================================ */
 
-.inspiration-sektion {
+/* Inspirationsblocket sitter ihop med upload-rutan som ETT kort: samma
+   bakgrund och border, men utan linje mellan dem. */
+.inspiration-kompakt {
   background: white;
-  border-radius: 16px;
-  overflow: hidden;
   border: 1.5px solid #e8e8e8;
-  margin-bottom: 28px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-
-.inspiration-hero-bild {
-  height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.inspiration-innehall {
-  padding: 32px 28px 36px;
-}
-
-.inspiration-titel {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2rem;
-  margin-bottom: 12px;
-  color: #1a1a1a;
-}
-
-.inspiration-budskap {
-  font-size: 1.1rem;
-  color: #555;
-  line-height: 1.7;
-  margin-bottom: 28px;
-  max-width: 600px;
-}
-
-.inspiration-galleri {
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  margin: 16px 0 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 32px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0;
+  overflow: hidden;
 }
 
-.insp-galleri-bild {
-  height: 140px;
-  border-radius: 12px;
+.inspiration-kompakt + .upload-sektion {
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  margin-top: 0;
+}
+
+.inspiration-bild {
+  min-height: 140px;
+  background-color: #eef2ee;
   display: flex;
   align-items: center;
   justify-content: center;
+  -webkit-mask-image: linear-gradient(to left, #000 60%, transparent 100%), linear-gradient(to top, #000 75%, transparent 100%);
+  -webkit-mask-composite: source-in;
+          mask-image: linear-gradient(to left, #000 60%, transparent 100%), linear-gradient(to top, #000 75%, transparent 100%);
+          mask-composite: intersect;
 }
 
-.insp-galleri-text {
+.insp-bild-text {
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
   text-shadow: 0 1px 4px rgba(0,0,0,0.3);
   opacity: 0.9;
 }
 
-.inspiration-overblick {
-  background: #f8faf8;
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 28px;
-}
-
-.inspiration-overblick h3 {
-  font-size: 1rem;
-  margin-bottom: 12px;
-  color: #1a1a1a;
-}
-
-.insp-feature {
-  font-size: 0.92rem;
-  color: #2b6a3a;
-  padding: 4px 0;
-}
-
-.inspiration-fakta {
+.inspiration-text {
+  padding: 18px 24px;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 16px;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.inspiration-cta {
-  display: block;
-  width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
-  padding: 16px 32px;
-  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+.inspiration-rubrik {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 6px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.inspiration-budskap {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .inspiration-kompakt {
+    grid-template-columns: 1fr;
+  }
+  .inspiration-bild { min-height: 140px; order: 2; }
+  .inspiration-text { padding: 18px 20px; order: 1; }
+  .inspiration-rubrik { font-size: 1.7rem; }
+  .inspiration-budskap { font-size: 0.92rem; }
+}
+
+.insp-galleri-text {
   color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  opacity: 0.9;
 }
 
-.inspiration-cta:hover {
-  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(43,106,58,0.3);
-}
-
-/* Fade-in animation for inspiration */
-#projekt-innehall.synlig .inspiration-sektion:not(.dold) {
-  animation: fadein 0.4s ease 0.15s both;
-}
+/* (features + fakta borttagna från kompakt-vyn) */
 
 #projekt-innehall.synlig .steg-indikator:not(.dold) {
   animation: fadein 0.3s ease 0.1s both;
+}
+
+/* ============================================================
+   BILDANALYS-LOADER (overlay i upload-sektionen)
+   ============================================================ */
+
+.bild-analys-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.bild-analys-loader p {
+  font-size: 1.05rem;
+  color: #2b6a3a;
+  font-weight: 500;
+}
+
+.bild-analys-spinner {
+  width: 52px;
+  height: 52px;
+  border: 4px solid #d8e3d8;
+  border-top-color: #2b6a3a;
+  border-radius: 50%;
+  animation: bild-analys-snurra 0.9s linear infinite;
+}
+
+@keyframes bild-analys-snurra {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   AI-SKISS-UNDERTEXT (framing under AI-bilden)
+   ============================================================ */
+
+.ai-skiss-undertext {
+  text-align: center;
+  font-size: 0.92rem;
+  color: #6a7a6a;
+  font-style: italic;
+  margin: 12px 0 4px;
+  padding: 0 16px;
 }
 
 /* ============================================================
@@ -2525,7 +2679,7 @@ ol.steg-substeg li {
     grid-template-columns: 1fr;
   }
   .inspiration-galleri {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
   .steg-etikett {
     display: none;
@@ -2533,17 +2687,8 @@ ol.steg-substeg li {
   .steg-indikator-linje {
     width: 24px;
   }
-  .inspiration-hero-bild {
-    height: 160px;
-  }
-  .inspiration-innehall {
-    padding: 24px 20px 28px;
-  }
-  .inspiration-titel {
-    font-size: 1.6rem;
-  }
   .inspiration-budskap {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 }
 
@@ -2588,6 +2733,76 @@ ol.steg-substeg li {
   font-size: 0.85rem;
   margin: 10px 0 0;
 }
+
+/* ============================================================
+   PERSPEKTIV-EDITOR + CTA
+   ============================================================ */
+.pv-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 24px auto;
+}
+.pv-actions .btn-anpassa,
+.pv-actions .btn-cta-visualisera {
+  margin: 0;
+}
+.btn-cta-visualisera {
+  display: inline-block;
+  padding: 14px 32px;
+  background: #fff;
+  color: #2b6a3a;
+  border: 2px solid #2b6a3a;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.btn-cta-visualisera:hover {
+  background: #2b6a3a;
+  color: #fff;
+  transform: translateY(-1px);
+}
+.pe-instruktion {
+  font-size: 0.95rem;
+  color: #444;
+  margin: 0 0 12px;
+}
+.pe-wrapper {
+  width: 100%;
+  background: #f3f3f3;
+  border-radius: 10px;
+  overflow: hidden;
+  user-select: none;
+}
+.pe-overlay polygon { vector-effect: non-scaling-stroke; }
+.pe-kontroller {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+  padding: 12px 14px;
+  background: #f7f7f7;
+  border-radius: 10px;
+}
+.pe-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #555;
+  flex: 1 1 160px;
+}
+.pe-slider input[type=range] { accent-color: #2b6a3a; }
+.pe-knappar {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.pe-knappar .ai-knapp { flex: 1; }
 
 /* ============================================================
    FOOTER

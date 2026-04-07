@@ -183,6 +183,90 @@
     opacity: 0.3,
   });
 
+  // Material för fokusläge
+  var dimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaaaaaa,
+    roughness: 0.9,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0.12,
+    depthWrite: false,
+  });
+  var focusMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffd700,
+    emissive: 0xffaa00,
+    emissiveIntensity: 0.35,
+    roughness: 0.5,
+    metalness: 0.1,
+  });
+
+  var focusState = null; // { savedMaterials, savedCamPos, savedTarget, startHandler }
+
+  function focusLayer(namn) {
+    if (!isReady()) return;
+    if (!layerMeshes[namn]) return;
+
+    // Återställ ev. tidigare fokus först
+    if (focusState) clearFocus();
+
+    var savedMaterials = {};
+    for (var n in layerMeshes) {
+      savedMaterials[n] = layerMeshes[n].material;
+      if (n === namn) {
+        layerMeshes[n].material = focusMaterial;
+      } else {
+        layerMeshes[n].material = dimMaterial;
+      }
+    }
+
+    // Beräkna bounding box för fokuserad mesh
+    var box = new THREE.Box3().setFromObject(layerMeshes[namn]);
+    var center = new THREE.Vector3();
+    box.getCenter(center);
+    var size = new THREE.Vector3();
+    box.getSize(size);
+    var maxDim = Math.max(size.x, size.y, size.z) || 500;
+
+    var savedCamPos = camera.position.clone();
+    var savedTarget = controls.target.clone();
+
+    // Zooma in: avstånd ~2.2x största måttet
+    var dist = Math.max(maxDim * 2.2, 800);
+    camera.position.set(center.x + dist * 0.8, center.y + dist * 0.6, center.z + dist * 0.8);
+    controls.target.copy(center);
+
+    // Auto-rotera långsammare för stora delar
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = Math.max(0.5, Math.min(2.0, 3000 / Math.max(maxDim, 500)));
+    controls.update();
+
+    // Stoppa autorotation när användaren interagerar
+    var startHandler = function () {
+      controls.autoRotate = false;
+    };
+    controls.addEventListener('start', startHandler);
+
+    focusState = {
+      savedMaterials: savedMaterials,
+      savedCamPos: savedCamPos,
+      savedTarget: savedTarget,
+      startHandler: startHandler,
+    };
+  }
+
+  function clearFocus() {
+    if (!focusState) return;
+    for (var n in focusState.savedMaterials) {
+      if (layerMeshes[n]) layerMeshes[n].material = focusState.savedMaterials[n];
+    }
+    controls.autoRotate = false;
+    controls.removeEventListener('start', focusState.startHandler);
+    camera.position.copy(focusState.savedCamPos);
+    controls.target.copy(focusState.savedTarget);
+    controls.update();
+    focusState = null;
+  }
+
   function isReady() {
     return !!(initialized && renderer && layerGroup && Object.keys(layerMeshes).length > 0);
   }
@@ -276,6 +360,8 @@
     getLayerNames: getLayerNames,
     isReady: isReady,
     snapshot: snapshot,
+    focusLayer: focusLayer,
+    clearFocus: clearFocus,
     clear: clearModel,
     resize: onResize,
   };
