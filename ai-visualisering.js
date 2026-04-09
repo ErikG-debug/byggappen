@@ -1658,14 +1658,23 @@ var AIVisualisering = (function () {
       var scale = Math.min(1, maxSide / Math.max(W, H));
       var sw = Math.round(W * scale);
       var sh = Math.round(H * scale);
-      async function _nedskala(dataUrl, outW, outH, mime, q) {
+      async function _nedskala(dataUrl, outW, outH, mime, q, flattenBg) {
         var im = await _loadImg(dataUrl);
         var c = document.createElement('canvas');
         c.width = outW; c.height = outH;
-        c.getContext('2d').drawImage(im, 0, 0, outW, outH);
+        var cx = c.getContext('2d');
+        if (flattenBg) {
+          // Fyll med solid bakgrund först — IC-Lights run_rmbg kräver RGB
+          // (assert C == 3), så alpha-kanalen får inte följa med. Mid-grå
+          // ger bäst segmentering; vit/svart kan få rmbg att missa kanter.
+          cx.fillStyle = flattenBg;
+          cx.fillRect(0, 0, outW, outH);
+        }
+        cx.drawImage(im, 0, 0, outW, outH);
         return c.toDataURL(mime || 'image/jpeg', q || 0.9);
       }
-      var altanSmall = await _nedskala(altanPng, sw, sh, 'image/png');
+      // Altan flattas mot mid-grå och exporteras som JPEG → garanterat RGB.
+      var altanSmall = await _nedskala(altanPng, sw, sh, 'image/jpeg', 0.92, '#7f7f7f');
       var tomtSmall  = await _nedskala(tomtBildDataUrl, sw, sh, 'image/jpeg', 0.9);
 
       // AI-polish: IC-Light FBC (Foreground-Background-Conditioned). Skicka
