@@ -1407,6 +1407,7 @@ async function gaVidare() {
     // Dölj även det kompakta inspirationsblocket — det har gjort sitt nu
     var headerKomp1 = document.getElementById('upload-mikro-header');
     if (headerKomp1) headerKomp1.classList.add('dold');
+    document.getElementById('pv-upload-sektion').classList.add('dold');
     // Uppdatera rubrik/ingress till nästa steg
     var rubrik = document.getElementById('upload-rubrik');
     if (rubrik) rubrik.textContent = 'Placera bygget och generera din skiss';
@@ -1602,18 +1603,11 @@ async function startaAIGenerering(maskDataUrl, cadCannyDataUrl) {
   AIVisualisering.renderLaddning(container);
   kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
 
-  var dim = { b: aktuellaB, l: aktuellaL, h: aktuellaH };
-
-  // Om assets inte skickades med (t.ex. "Uppdatera AI-bild"-knappen efter slider-ändring),
-  // re-rendera canny+mask från nuvarande design med samma kameraTransform.
-  if (!maskDataUrl || !cadCannyDataUrl) {
-    var assets = await AIVisualisering.genereraCannyOchMask(
-      uploadedImage, aktuelltDesign, aktuelltBerakning, aktuellKameraTransform
-    );
-    maskDataUrl = assets.maskDataUrl;
-    cadCannyDataUrl = assets.cadCannyDataUrl;
-  }
-  var result = await AIVisualisering.generera(valtProjekt, dim, uploadedImage, maskDataUrl, cadCannyDataUrl, aktuelltLjus);
+  // Three.js offscreen composite — ersätter canny/mask/FLUX-pipelinen.
+  // Renderar altan-mesh:ar i en separat scen och komposietrar över tomtbilden.
+  var result = await AIVisualisering.genereraRealistisk3D(
+    uploadedImage, aktuelltDesign, aktuelltBerakning, aktuellKameraTransform, aktuelltLjus
+  );
   if (result.ok) {
     AIVisualisering.renderBild(container, result.url, {});
     senasteAIGenMatt = { b: aktuellaB, l: aktuellaL };
@@ -1745,6 +1739,8 @@ function hanteraUpload(file) {
     document.getElementById('upload-dropzone').classList.add('dold');
     document.getElementById('upload-preview').classList.remove('dold');
     document.getElementById('upload-fortsatt').disabled = false;
+    // Direkt vidare till perspektiv-editorn — ingen extra knapptryckning
+    gaVidare();
   }
 
   if (typeof createImageBitmap === 'function') {

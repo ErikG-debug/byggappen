@@ -22,7 +22,7 @@ body {
   justify-content: center;
   overflow: hidden;
   background: url('assets/hero-bg.jpg') center/cover fixed no-repeat;
-  background-color: #1a3a24;
+  background-color: #0f3a23;
 }
 
 .hero-overlay {
@@ -58,7 +58,7 @@ body {
 
 /* --- Header (sticky) --- */
 header {
-  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  background: linear-gradient(135deg, #1c5d3a, #25754a);
   color: white;
   padding: 12px 32px;
   position: sticky;
@@ -129,7 +129,7 @@ header.scrolled {
 }
 
 .sok-kort-wrapper:focus-within {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   box-shadow: 0 0 0 3px rgba(43,106,58,0.1);
 }
 
@@ -213,14 +213,14 @@ main:has(#projekt-innehall.synlig) {
 }
 
 .kort:not(.kommande):hover {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   box-shadow: 0 6px 20px rgba(43,106,58,0.15);
   transform: translateY(-3px);
   background: linear-gradient(to bottom, white, #f8fcf9);
 }
 
 .kort.valt {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   box-shadow: 0 4px 12px rgba(43,106,58,0.2);
 }
 
@@ -279,7 +279,7 @@ main:has(#projekt-innehall.synlig) {
 }
 .story-pitch        { background: #f4f1ec; }
 .story-inspiration  { background: #ffffff; }
-.story-hur          { background: #1a3a24; color: #f4f1ec; overflow: visible; }
+.story-hur          { background: #0f3a23; color: #f4f1ec; overflow: visible; }
 
 .sektion-inner {
   max-width: 1200px;
@@ -292,7 +292,7 @@ main:has(#projekt-innehall.synlig) {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.02em;
-  color: #1a3a24;
+  color: #0f3a23;
   margin: 0 0 28px;
   text-align: center;
 }
@@ -495,7 +495,7 @@ main:has(#projekt-innehall.synlig) {
   height: 22vh;
   max-height: 240px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  background: linear-gradient(135deg, #1c5d3a, #25754a);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -554,7 +554,7 @@ main:has(#projekt-innehall.synlig) {
   display: block;
   margin: 24px auto 8px;
   padding: 16px 36px;
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -575,7 +575,7 @@ main:has(#projekt-innehall.synlig) {
   display: block;
   margin: 24px auto;
   padding: 14px 32px;
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -626,7 +626,7 @@ main:has(#projekt-innehall.synlig) {
   border: none;
 }
 .design-spara {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: #fff;
 }
 .design-spara:hover { background: #245a32; }
@@ -746,13 +746,13 @@ main:has(#projekt-innehall.synlig) {
 }
 
 .flik:hover {
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 .flik.aktiv-flik {
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: bold;
-  border-bottom-color: #2b6a3a;
+  border-bottom-color: #1c5d3a;
 }
 
 /* --- Projektinfo --- */
@@ -789,7 +789,7 @@ main:has(#projekt-innehall.synlig) {
 
 .steg-progress-fill {
   height: 100%;
-  background: #2b6a3a;
+  background: #1c5d3a;
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -820,7 +820,7 @@ main:has(#projekt-innehall.synlig) {
 }
 
 .steg-rad:hover {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   box-shadow: 0 2px 8px rgba(43,106,58,0.1);
 }
 
@@ -853,12 +853,12 @@ main:has(#projekt-innehall.synlig) {
 }
 
 .steg-check:hover {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
 }
 
 .steg-check.checked {
-  background: #2b6a3a;
-  border-color: #2b6a3a;
+  background: #1c5d3a;
+  border-color: #1c5d3a;
 }
 
 .steg-check.stor {
@@ -869,7 +869,7 @@ main:has(#projekt-innehall.synlig) {
 
 /* Stegnummer i raden */
 .steg-rad-nummer {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   width: 32px;
   height: 32px;
@@ -902,12 +902,12 @@ main:has(#projekt-innehall.synlig) {
 }
 
 .steg-rad:hover .steg-rad-pil {
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 /* --- Steg-nummer (delad, används i detalj) --- */
 .steg-nummer {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   width: 38px;
   height: 38px;
@@ -928,7 +928,7 @@ main:has(#projekt-innehall.synlig) {
 .steg-detalj-tillbaka {
   background: none;
   border: none;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -1103,14 +1103,14 @@ ol.steg-substeg li {
   border-radius: 8px;
   font-size: 0.95rem;
   cursor: pointer;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: 600;
   transition: all 0.15s;
 }
 
 .steg-nav-knapp:hover:not(:disabled) {
   background: #f0f7f2;
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
 }
 
 .steg-nav-knapp:disabled {
@@ -1140,7 +1140,7 @@ ol.steg-substeg li {
 }
 
 .lista-tabell th {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   padding: 12px 14px;
   text-align: left;
@@ -1217,7 +1217,7 @@ ol.steg-substeg li {
 .stil-knapp:last-child { border-right: none; }
 .stil-knapp:hover { background: #f0f0f0; }
 .stil-knapp.aktiv-stil {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   font-weight: bold;
 }
@@ -1305,13 +1305,13 @@ ol.steg-substeg li {
 
 .antal-andrad {
   font-weight: bold;
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 .pris-cell {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1321,7 +1321,7 @@ ol.steg-substeg li {
 }
 
 .totalsumma {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   padding: 14px 20px;
   border-radius: 8px;
@@ -1342,7 +1342,7 @@ ol.steg-substeg li {
 }
 
 .skriv-ut-knapp {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -1375,7 +1375,7 @@ ol.steg-substeg li {
 
 .verktyg-rubrik {
   margin: 20px 0 8px;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-size: 1.1rem;
 }
 
@@ -1421,11 +1421,11 @@ ol.steg-substeg li {
   white-space: nowrap;
   transition: all 0.15s ease;
 }
-.visa-3d-knapp:hover { background: #f0efe8; color: #1a3a24; border-color: #1a3a24; }
+.visa-3d-knapp:hover { background: #f0efe8; color: #0f3a23; border-color: #0f3a23; }
 .visa-3d-knapp.aktiv {
-  background: #1a3a24;
+  background: #0f3a23;
   color: #fff;
-  border-color: #1a3a24;
+  border-color: #0f3a23;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 .visa-3d-cell { text-align: right; }
@@ -1515,7 +1515,7 @@ ol.steg-substeg li {
 .tillbaka-knapp {
   background: none;
   border: none;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -1579,7 +1579,7 @@ ol.steg-substeg li {
 .hero-badge {
   background: #f0f7f2;
   border: 1px solid #c8e6d0;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-size: 0.82rem;
   padding: 4px 12px;
   border-radius: 20px;
@@ -1588,7 +1588,7 @@ ol.steg-substeg li {
 
 /* Kostnadsdisplay */
 .hero-kostnad {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   border-radius: 14px;
   padding: 20px 26px;
@@ -1666,7 +1666,7 @@ ol.steg-substeg li {
 .pv-slider-val {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #2b6a3a;
+  color: #1c5d3a;
   min-width: 52px;
   text-align: right;
   transition: color 0.15s;
@@ -1675,7 +1675,7 @@ ol.steg-substeg li {
 .pv-slider-block input[type="range"] {
   width: 100%;
   height: 6px;
-  accent-color: #2b6a3a;
+  accent-color: #1c5d3a;
   cursor: pointer;
   border-radius: 3px;
 }
@@ -1705,7 +1705,7 @@ ol.steg-substeg li {
 }
 .pv-yta-rad strong {
   font-size: 1.3rem;
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 .pv-dim-tip {
@@ -1734,7 +1734,7 @@ ol.steg-substeg li {
   gap: 8px;
 }
 .avancerat-toggle:hover { background: #f5f5f5; border-color: #bbb; }
-.avancerat-toggle.aktiv { border-color: #2b6a3a; color: #2b6a3a; background: #f0f7f2; }
+.avancerat-toggle.aktiv { border-color: #1c5d3a; color: #1c5d3a; background: #f0f7f2; }
 
 .avancerat-pil {
   transition: transform 0.2s;
@@ -1870,12 +1870,12 @@ ol.steg-substeg li {
 }
 
 .upload-yta:hover {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   background: #f9fdf9;
 }
 
 .upload-yta.dragover {
-  border-color: #2b6a3a;
+  border-color: #1c5d3a;
   background: #e8f5e9;
 }
 
@@ -1899,7 +1899,7 @@ ol.steg-substeg li {
 
 .upload-knapp {
   display: inline-block;
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   padding: 10px 28px;
   border-radius: 8px;
@@ -1946,8 +1946,8 @@ ol.steg-substeg li {
 }
 
 .upload-byt:hover {
-  border-color: #2b6a3a;
-  color: #2b6a3a;
+  border-color: #1c5d3a;
+  color: #1c5d3a;
 }
 
 .upload-knappar {
@@ -1959,7 +1959,7 @@ ol.steg-substeg li {
 }
 
 .upload-fortsatt {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   border: none;
   padding: 13px 36px;
@@ -1992,7 +1992,7 @@ ol.steg-substeg li {
 }
 
 .upload-hoppa:hover {
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 .upload-fel {
@@ -2038,11 +2038,11 @@ ol.steg-substeg li {
 }
 
 .upload-fortsatt:not(:disabled) {
-  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  background: linear-gradient(135deg, #1c5d3a, #2e7d4f);
 }
 
 .upload-fortsatt:not(:disabled):hover {
-  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+  background: linear-gradient(135deg, #25754a, #1c5d3a);
 }
 
 /* ============================================================
@@ -2079,7 +2079,7 @@ ol.steg-substeg li {
 
 .vy-tab.aktiv-vy {
   background: white;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -2166,19 +2166,19 @@ ol.steg-substeg li {
 }
 
 .ai-knapp-primar {
-  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  background: linear-gradient(135deg, #1c5d3a, #2e7d4f);
   color: white;
   border: none;
 }
 
 .ai-knapp-primar:hover {
-  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+  background: linear-gradient(135deg, #25754a, #1c5d3a);
 }
 
 .ai-knapp-sekundar {
   background: white;
-  color: #2b6a3a;
-  border: 1.5px solid #2b6a3a;
+  color: #1c5d3a;
+  border: 1.5px solid #1c5d3a;
 }
 
 .ai-knapp-sekundar:hover {
@@ -2234,7 +2234,7 @@ ol.steg-substeg li {
   width: 20px;
   height: 20px;
   border: 2.5px solid #ccc;
-  border-top-color: #2b6a3a;
+  border-top-color: #1c5d3a;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -2341,13 +2341,13 @@ ol.steg-substeg li {
 }
 
 .mask-knapp:hover {
-  border-color: #2b6a3a;
-  color: #2b6a3a;
+  border-color: #1c5d3a;
+  color: #1c5d3a;
   background: #f0f7f2;
 }
 
 .mask-knapp-generera {
-  background: linear-gradient(135deg, #2b6a3a, #3a8a4e);
+  background: linear-gradient(135deg, #1c5d3a, #2e7d4f);
   color: white;
   border: none;
   padding: 10px 28px;
@@ -2357,7 +2357,7 @@ ol.steg-substeg li {
 }
 
 .mask-knapp-generera:hover {
-  background: linear-gradient(135deg, #1e5a30, #2b6a3a);
+  background: linear-gradient(135deg, #25754a, #1c5d3a);
   color: white;
 }
 
@@ -2389,7 +2389,7 @@ ol.steg-substeg li {
 .kort-grid .kort:not(.kommande):nth-child(2),
 .kort-grid .kort:not(.kommande):nth-child(3) {
   position: relative;
-  border: 2px solid #2b6a3a;
+  border: 2px solid #1c5d3a;
   box-shadow: 0 4px 18px rgba(43, 106, 58, 0.18);
 }
 .kort-grid .kort:not(.kommande):nth-child(2)::after,
@@ -2398,7 +2398,7 @@ ol.steg-substeg li {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
   font-size: 0.72rem;
   font-weight: 600;
@@ -2448,7 +2448,7 @@ ol.steg-substeg li {
   margin-top: 8px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 /* ============================================================
@@ -2495,13 +2495,13 @@ ol.steg-substeg li {
 }
 
 .aktivt-steg .steg-nummer {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: white;
 }
 
 .klart-steg .steg-nummer {
   background: #a8d5ba;
-  color: #2b6a3a;
+  color: #1c5d3a;
 }
 
 .steg-etikett {
@@ -2512,7 +2512,7 @@ ol.steg-substeg li {
 }
 
 .aktivt-steg .steg-etikett {
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: 600;
 }
 
@@ -2640,7 +2640,7 @@ ol.steg-substeg li {
 
 .bild-analys-loader p {
   font-size: 1.05rem;
-  color: #2b6a3a;
+  color: #1c5d3a;
   font-weight: 500;
 }
 
@@ -2648,7 +2648,7 @@ ol.steg-substeg li {
   width: 52px;
   height: 52px;
   border: 4px solid #d8e3d8;
-  border-top-color: #2b6a3a;
+  border-top-color: #1c5d3a;
   border-radius: 50%;
   animation: bild-analys-snurra 0.9s linear infinite;
 }
@@ -2696,7 +2696,7 @@ ol.steg-substeg li {
 .mask-matt-hint {
   background: #eaf3ec;
   border: 1px solid #b8d4be;
-  color: #2b6a3a;
+  color: #1c5d3a;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -2710,7 +2710,7 @@ ol.steg-substeg li {
 }
 .ai-uppdatera-knapp {
   width: 100%;
-  background: linear-gradient(135deg, #2b6a3a, #1e5a30);
+  background: linear-gradient(135deg, #1c5d3a, #25754a);
   color: #fff;
   border: none;
   padding: 12px 16px;
@@ -2752,8 +2752,8 @@ ol.steg-substeg li {
   display: inline-block;
   padding: 14px 32px;
   background: #fff;
-  color: #2b6a3a;
-  border: 2px solid #2b6a3a;
+  color: #1c5d3a;
+  border: 2px solid #1c5d3a;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
@@ -2762,7 +2762,7 @@ ol.steg-substeg li {
   transition: background 0.15s, color 0.15s, transform 0.1s;
 }
 .btn-cta-visualisera:hover {
-  background: #2b6a3a;
+  background: #1c5d3a;
   color: #fff;
   transform: translateY(-1px);
 }
@@ -2771,44 +2771,83 @@ ol.steg-substeg li {
   color: #444;
   margin: 0 0 12px;
 }
+.pe-hint {
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+  margin: 8px 0 14px;
+}
+#ai-bild-container {
+  background: #fff;
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
 .pe-wrapper {
   width: 100%;
+  display: flex;
+  justify-content: center;
   background: #f3f3f3;
   border-radius: 10px;
   overflow: hidden;
   user-select: none;
+  margin-bottom: 16px;
+}
+.pe-img-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 72vh;
+}
+.pe-img-wrap img {
+  display: block;
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+}
+.pe-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 .pe-overlay polygon { vector-effect: non-scaling-stroke; }
 .pe-kontroller {
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin: 14px 0;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 18px;
   background: #f7f7f7;
   border-radius: 10px;
+  align-content: start;
 }
 .pe-slider {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
+  gap: 6px;
+  font-size: 0.9rem;
   color: #555;
-  flex: 1 1 160px;
 }
-.pe-slider input[type=range] { accent-color: #2b6a3a; }
+.pe-slider input[type=range] { accent-color: #1c5d3a; width: 100%; }
+
+.pe-kontroller { margin-bottom: 18px; }
 .pe-knappar {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  justify-content: flex-end;
 }
-.pe-knappar .ai-knapp { flex: 1; }
+.pe-knappar .ai-knapp-sekundar { min-width: 120px; }
+.pe-knappar .ai-knapp-primar { min-width: 200px; }
 
 /* ============================================================
    FOOTER
    ============================================================ */
 .sid-footer {
-  background: #1a3a24;
+  background: #0f3a23;
   color: #e8efe9;
   margin-top: 80px;
   padding: 56px 32px 24px;

@@ -710,6 +710,103 @@ function byggModellSilhouette(delar, ctx) {
   return byggModell(delar, ctx, _SILHOUETTE_PALETTE, 'teknisk');
 }
 
+// ── Hidden-line removal wireframe (för canny-controlnet) ──
+// Endast framvända face-kanter ritas, så FLUX inte ser ett X-ray-mönster.
+function _faceVisibleByNormal(nx, ny, nz, ctx) {
+  // view_dir (kamera → scen) = (sinAz·cosEl, cosAz·cosEl, -sinEl)
+  // härlett från Render3D.proj/cameraDepth-konventionen.
+  var vx = ctx.sinAz * ctx.cosEl, vy = ctx.cosAz * ctx.cosEl, vz = -ctx.sinEl;
+  return (nx * vx + ny * vy + nz * vz) < -0.05;
+}
+
+function _emitWireFace(verts3d, ctx) {
+  var pts = verts3d.map(function (v) { return ctx.pt(v[0], v[1], v[2]); });
+  return '<polygon points="' + pts.join(' ') + '" fill="none" stroke="#ffffff" stroke-width="1.5"/>';
+}
+
+function _emitBoxWire(x0, x1, y0, y1, z0, z1, ctx) {
+  var out = '';
+  var faces = [
+    { n: [-1, 0, 0], v: [[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]] },
+    { n: [ 1, 0, 0], v: [[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]] },
+    { n: [0, -1, 0], v: [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]] },
+    { n: [0,  1, 0], v: [[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]] },
+    { n: [0, 0,  1], v: [[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]] },
+    { n: [0, 0, -1], v: [[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]] },
+  ];
+  for (var i = 0; i < faces.length; i++) {
+    if (_faceVisibleByNormal(faces[i].n[0], faces[i].n[1], faces[i].n[2], ctx)) {
+      out += _emitWireFace(faces[i].v, ctx);
+    }
+  }
+  return out;
+}
+
+function byggModellWireframeVisible(delar, ctx) {
+  var out = '';
+  for (var i = 0; i < delar.length; i++) {
+    var del = delar[i];
+    if (lager[del.lager] === undefined) lager[del.lager] = true;
+    if (!lager[del.lager]) continue;
+
+    if (del.typ === 'box') {
+      var cx = del.pos[0], cy = del.pos[1], cz = del.pos[2];
+      var dw = del.dim[0], dd = del.dim[1], dh = del.dim[2];
+      out += _emitBoxWire(cx - dw/2, cx + dw/2, cy - dd/2, cy + dd/2, cz, cz + dh, ctx);
+
+    } else if (del.typ === 'regel') {
+      var rW = del.bredd, rZB = del.zBot, rZT = del.zTop;
+      var rb = del.langd_b, rl = del.langd_l;
+      var rox = del._offX || 0, roy = del._offY || 0;
+      var rx0, rx1, ry0, ry1;
+      if (del.axis === 'x') { rx0 = del.pos - rW/2 + rox; rx1 = del.pos + rW/2 + rox; ry0 = roy; ry1 = roy + rl; }
+      else { ry0 = del.pos - rW/2 + roy; ry1 = del.pos + rW/2 + roy; rx0 = rox; rx1 = rox + rb; }
+      out += _emitBoxWire(rx0, rx1, ry0, ry1, rZB, rZT, ctx);
+
+    } else if (del.typ === 'trall') {
+      var tb = del.b, tl = del.l, th = del.h, tT = del.trallT;
+      var tox = del._offX || 0, toy = del._offY || 0;
+      out += _emitBoxWire(tox, tox + tb, toy, toy + tl, th - tT, th, ctx);
+
+    } else if (del.typ === 'kantbrader') {
+      var kb = del.b, kl = del.l, kh = del.h, kantH = del.kantH;
+      var kox = del._offX || 0, koy = del._offY || 0;
+      out += _emitBoxWire(kox, kox + kb, koy, koy + kl, kh - kantH, kh, ctx);
+
+    } else if (del.typ === 'golv') {
+      var gb = del.b, gl = del.l, gT = del.golvT;
+      var gox = del._offX || 0, goy = del._offY || 0;
+      out += _emitBoxWire(gox, gox + gb, goy, goy + gl, 0, gT, ctx);
+
+    } else if (del.typ === 'vagg') {
+      var faceDot = 0;
+      if (del.sida === 'nord') faceDot = ctx.cosAz;
+      else if (del.sida === 'syd') faceDot = -ctx.cosAz;
+      else if (del.sida === 'vast') faceDot = ctx.sinAz;
+      else if (del.sida === 'ost') faceDot = -ctx.sinAz;
+      if (faceDot < -0.12) continue;
+      var vb = del.b, vl = del.l, vh = del.h;
+      var vox = del._offX || 0, voy = del._offY || 0;
+      var vverts;
+      if (del.sida === 'nord') vverts = [[vox,voy,0],[vox+vb,voy,0],[vox+vb,voy,vh],[vox,voy,vh]];
+      else if (del.sida === 'syd') vverts = [[vox,voy+vl,0],[vox+vb,voy+vl,0],[vox+vb,voy+vl,vh],[vox,voy+vl,vh]];
+      else if (del.sida === 'vast') vverts = [[vox,voy,0],[vox,voy+vl,0],[vox,voy+vl,vh],[vox,voy,vh]];
+      else vverts = [[vox+vb,voy,0],[vox+vb,voy+vl,0],[vox+vb,voy+vl,vh],[vox+vb,voy,vh]];
+      out += _emitWireFace(vverts, ctx);
+
+    } else if (del.typ === 'sadeltak') {
+      var sb = del.b, sl = del.l, sh = del.h, snH = del.nockHojd, sut = del.takUtsprang;
+      var sox = del._offX || 0, soy = del._offY || 0;
+      var vansterTak = [[sox-sut,soy-sut,sh],[sox+sb/2,soy-sut,snH+sut*0.05],[sox+sb/2,soy+sl+sut,snH+sut*0.05],[sox-sut,soy+sl+sut,sh]];
+      var hogerTak = [[sox+sb/2,soy-sut,snH+sut*0.05],[sox+sb+sut,soy-sut,sh],[sox+sb+sut,soy+sl+sut,sh],[sox+sb/2,soy+sl+sut,snH+sut*0.05]];
+      if (_faceVisibleByNormal(-1, 0, 1, ctx)) out += _emitWireFace(vansterTak, ctx);
+      if (_faceVisibleByNormal( 1, 0, 1, ctx)) out += _emitWireFace(hogerTak, ctx);
+    }
+    // racke / dorr / fonster / wall: hoppas över — inte kritiska för canny-silhuett
+  }
+  return out;
+}
+
 // ── Legacy SVG render-hjälpare (privata, för preview) ──
 
 function _renderBoxSVG(del, ctx, palette) {

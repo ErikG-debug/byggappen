@@ -18,7 +18,7 @@ var Editor = (function () {
   var _valdSektionId = null; // Vald sektion
 
   // ── Visuella konstanter ──
-  var HANDLE_COLOR    = '#2b6a3a';
+  var HANDLE_COLOR    = '#1c5d3a';
   var HIT_AREA        = 14;       // px — osynligt klickbart omrade
   var INDICATOR_R     = 5;        // px — synlig cirkel
   var CORNER_SIZE     = 10;       // px — hornhandtag
