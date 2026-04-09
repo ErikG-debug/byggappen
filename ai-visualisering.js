@@ -1738,29 +1738,64 @@ var AIVisualisering = (function () {
             var tomtImg = await _loadImg(tomtBildDataUrl);
             fx.drawImage(tomtImg, 0, 0, W, H);
 
-            // Bygg utvidgad mask: altan-alfa + nedåt-extension via vertical
-            // shift-blur. Resultat: full opacitet på altanen, mjuk falloff
-            // ~3% av höjden nedåt så IC-Lights kontakt-manipulationer kommer
-            // igenom vid basen utan att läcka ut uppåt eller åt sidorna.
+            // Bygg utvidgad mask: altan-alfa som bas + en smal zon som
+            // sträcker sig *endast nedåt från altanens understa pixel per
+            // kolumn*. Sidor och topp förblir skarpa mot sin originalbakgrund.
+            // Detta ger IC-Light spelrum där altanen möter marken (kontakt-AO,
+            // färgblödning) men inte mot himmel/träd/husfasad.
+            var altanCanvasFull = document.createElement('canvas');
+            altanCanvasFull.width = W; altanCanvasFull.height = H;
+            altanCanvasFull.getContext('2d').drawImage(altanImgFull, 0, 0, W, H);
+            var altanData = altanCanvasFull.getContext('2d').getImageData(0, 0, W, H);
+
             var maskCanvas = document.createElement('canvas');
             maskCanvas.width = W; maskCanvas.height = H;
             var mcx = maskCanvas.getContext('2d');
-            mcx.drawImage(altanImgFull, 0, 0, W, H);
-            // Vertikal falloff: rita altan-alfan flera gånger med ökande
-            // y-offset och minskande opacitet → dropshadow nedåt, men bara
-            // som alfa-mask (vi använder den till destination-in).
-            var shiftMax = Math.round(H * 0.03);
-            var steps = 6;
-            for (var si = 1; si <= steps; si++) {
-              mcx.globalAlpha = (1 - si / steps) * 0.9;
-              mcx.drawImage(altanImgFull, 0, Math.round(shiftMax * si / steps), W, H);
+            var maskData = mcx.createImageData(W, H);
+
+            // Per kolumn: hitta understa alpha > 8, extenda nedåt med
+            // cosinus-falloff. ~2.5% av H = ca 25 pixlar på 1024-höjd.
+            var extend = Math.round(H * 0.025);
+            for (var xCol = 0; xCol < W; xCol++) {
+              // Leta nedifrån och uppåt efter första opaka pixel
+              var yBottom = -1;
+              for (var yy = H - 1; yy >= 0; yy--) {
+                if (altanData.data[(yy * W + xCol) * 4 + 3] > 8) { yBottom = yy; break; }
+              }
+              // Kopiera altan-alfan för denna kolumn (bevara originalopacitet)
+              for (var yy2 = 0; yy2 < H; yy2++) {
+                var idx = (yy2 * W + xCol) * 4;
+                var a = altanData.data[idx + 3];
+                maskData.data[idx]   = 255;
+                maskData.data[idx+1] = 255;
+                maskData.data[idx+2] = 255;
+                maskData.data[idx+3] = a;
+              }
+              // Extend nedanför yBottom
+              if (yBottom >= 0) {
+                for (var dy = 1; dy <= extend && (yBottom + dy) < H; dy++) {
+                  var idx2 = ((yBottom + dy) * W + xCol) * 4;
+                  var t = dy / extend; // 0..1
+                  var falloff = Math.cos(t * Math.PI / 2); // mjuk cosinus
+                  var av = Math.round(255 * falloff * 0.85);
+                  if (av > maskData.data[idx2 + 3]) {
+                    maskData.data[idx2]   = 255;
+                    maskData.data[idx2+1] = 255;
+                    maskData.data[idx2+2] = 255;
+                    maskData.data[idx2+3] = av;
+                  }
+                }
+              }
             }
-            mcx.globalAlpha = 1;
-            // Mjuka kanten en aning för att undvika stepping
-            mcx.globalCompositeOperation = 'source-over';
-            mcx.filter = 'blur(' + Math.round(Math.max(W, H) * 0.003) + 'px)';
-            mcx.drawImage(maskCanvas, 0, 0);
-            mcx.filter = 'none';
+            mcx.putImageData(maskData, 0, 0);
+            // Liten horisontell blur så kolumn-diskontinuiteter inte syns
+            var tmpMask = document.createElement('canvas');
+            tmpMask.width = W; tmpMask.height = H;
+            var tmcx = tmpMask.getContext('2d');
+            tmcx.filter = 'blur(' + Math.round(Math.max(W, H) * 0.003) + 'px)';
+            tmcx.drawImage(maskCanvas, 0, 0);
+            tmcx.filter = 'none';
+            maskCanvas = tmpMask;
 
             // Relightade altanen, skalad till full res
             var relLayer = document.createElement('canvas');
