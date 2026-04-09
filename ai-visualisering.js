@@ -1652,6 +1652,22 @@ var AIVisualisering = (function () {
       // Rå Three.js-komposit som fallback om IC-Light-anropet misslyckas.
       var komposit = await _kompositeraOverTomt(tomtBildDataUrl, altanPng, W, H, null);
 
+      // Nedskala innan vi skickar till IC-Light — modellen jobbar internt
+      // på ~768px och 3024×4032-bilder sprängar annars request-gränsen.
+      var maxSide = 1024;
+      var scale = Math.min(1, maxSide / Math.max(W, H));
+      var sw = Math.round(W * scale);
+      var sh = Math.round(H * scale);
+      async function _nedskala(dataUrl, outW, outH, mime, q) {
+        var im = await _loadImg(dataUrl);
+        var c = document.createElement('canvas');
+        c.width = outW; c.height = outH;
+        c.getContext('2d').drawImage(im, 0, 0, outW, outH);
+        return c.toDataURL(mime || 'image/jpeg', q || 0.9);
+      }
+      var altanSmall = await _nedskala(altanPng, sw, sh, 'image/png');
+      var tomtSmall  = await _nedskala(tomtBildDataUrl, sw, sh, 'image/jpeg', 0.9);
+
       // AI-polish: IC-Light FBC (Foreground-Background-Conditioned). Skicka
       // altanPng (med alpha — IC-Light läser transparensen som förgrundsmask)
       // och tomtbilden som bakgrund. Modellen relightar altanen så ljus,
@@ -1666,10 +1682,10 @@ var AIVisualisering = (function () {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            subject_image: altanPng,
-            background_image: tomtBildDataUrl,
-            width: W,
-            height: H
+            subject_image: altanSmall,
+            background_image: tomtSmall,
+            width: sw,
+            height: sh
           })
         });
         if (polRes.ok) {
