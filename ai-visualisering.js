@@ -1674,138 +1674,44 @@ var AIVisualisering = (function () {
       var dbgPt = dbgCtx.proj(b/2, l/2, hh/2);
       console.log('[debug] Render3D säger target hamnar vid pixel:', dbgPt, 'av (', W, H, ')');
 
-      // Rå Three.js-komposit som fallback om IC-Light-anropet misslyckas.
+      // Rå Three.js-komposit (altan inritad på tomtbilden) — detta är vad
+      // Nano Banana tar som input och retuscherar. Fallback om anropet failar.
       var komposit = await _kompositeraOverTomt(tomtBildDataUrl, altanPng, W, H, null);
 
-      // Nedskala innan vi skickar till IC-Light — modellen jobbar internt
-      // på ~768px och 3024×4032-bilder sprängar annars request-gränsen.
-      var maxSide = 1024;
+      // Nedskala till max 2048 långsida innan vi skickar — Nano Banana
+      // hanterar stora bilder men payload + latency blir onödigt stort
+      // från 3024×4032.
+      var maxSide = 2048;
       var scale = Math.min(1, maxSide / Math.max(W, H));
       var sw = Math.round(W * scale);
       var sh = Math.round(H * scale);
-      async function _nedskala(dataUrl, outW, outH, mime, q, flattenBg) {
-        var im = await _loadImg(dataUrl);
-        var c = document.createElement('canvas');
-        c.width = outW; c.height = outH;
-        var cx = c.getContext('2d');
-        if (flattenBg) {
-          // Fyll med solid bakgrund först — IC-Lights run_rmbg kräver RGB
-          // (assert C == 3), så alpha-kanalen får inte följa med. Mid-grå
-          // ger bäst segmentering; vit/svart kan få rmbg att missa kanter.
-          cx.fillStyle = flattenBg;
-          cx.fillRect(0, 0, outW, outH);
-        }
-        cx.drawImage(im, 0, 0, outW, outH);
-        return c.toDataURL(mime || 'image/jpeg', q || 0.9);
+      var kompositLiten = komposit;
+      if (scale < 1) {
+        var kImg = await _loadImg(komposit);
+        var kC = document.createElement('canvas');
+        kC.width = sw; kC.height = sh;
+        kC.getContext('2d').drawImage(kImg, 0, 0, sw, sh);
+        kompositLiten = kC.toDataURL('image/jpeg', 0.92);
       }
-      // Altan flattas mot mid-grå och exporteras som JPEG → garanterat RGB.
-      var altanSmall = await _nedskala(altanPng, sw, sh, 'image/jpeg', 0.92, '#7f7f7f');
-      var tomtSmall  = await _nedskala(tomtBildDataUrl, sw, sh, 'image/jpeg', 0.9);
 
-      // AI-polish: IC-Light FBC (Foreground-Background-Conditioned). Skicka
-      // altanPng (med alpha — IC-Light läser transparensen som förgrundsmask)
-      // och tomtbilden som bakgrund. Modellen relightar altanen så ljus,
-      // färgtemperatur och kontaktskuggor matchar scenen. Geometrin bevaras
-      // eftersom subject_image-identiteten låses, bakgrunden bevaras eftersom
-      // den ges som explicit input.
+      // AI-polish: google/nano-banana (Gemini 2.5 Flash Image). Instruktions-
+      // styrd editor. Skicka den platta kompositen + text-instruktion om att
+      // retuschera bara altan-strukturen. Modellen förstår semantiken och
+      // bevarar bakgrund + geometri samtidigt som altanen blir fotorealistisk.
       var finalUrl = komposit;
       try {
         var tPol0 = Date.now();
-        console.log('[polera] IC-Light: skickar förgrund + bakgrund…');
+        console.log('[polera] Nano Banana: skickar komposit…');
         var polRes = await fetch(_config.proxyUrl + '/api/polera', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject_image: altanSmall,
-            background_image: tomtSmall,
-            width: sw,
-            height: sh
-          })
+          body: JSON.stringify({ image: kompositLiten })
         });
         if (polRes.ok) {
           var polData = await polRes.json();
           if (polData.url) {
-            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms, maskar in altan + kontaktzon…');
-            // IC-Light har relightat hela bilden på lågupplösning. Vi klistrar
-            // in endast altan-regionen + en smal zon under den (kontakt-AO,
-            // färgblödning från gräset) över originaltomten, så bakgrunden
-            // bevaras skarp överallt annars.
-            var relightImg = await _loadImg(polData.url);
-            var altanImgFull = await _loadImg(altanPng); // RGBA på full res
-            var final = document.createElement('canvas');
-            final.width = W; final.height = H;
-            var fx = final.getContext('2d');
-            var tomtImg = await _loadImg(tomtBildDataUrl);
-            fx.drawImage(tomtImg, 0, 0, W, H);
-
-            // Bygg utvidgad mask: altan-alfa som bas + en smal zon som
-            // sträcker sig *endast nedåt från altanens understa pixel per
-            // kolumn*. Sidor och topp förblir skarpa mot sin originalbakgrund.
-            // Detta ger IC-Light spelrum där altanen möter marken (kontakt-AO,
-            // färgblödning) men inte mot himmel/träd/husfasad.
-            var altanCanvasFull = document.createElement('canvas');
-            altanCanvasFull.width = W; altanCanvasFull.height = H;
-            altanCanvasFull.getContext('2d').drawImage(altanImgFull, 0, 0, W, H);
-            var altanData = altanCanvasFull.getContext('2d').getImageData(0, 0, W, H);
-
-            var maskCanvas = document.createElement('canvas');
-            maskCanvas.width = W; maskCanvas.height = H;
-            var mcx = maskCanvas.getContext('2d');
-            var maskData = mcx.createImageData(W, H);
-
-            // Per kolumn: hitta understa alpha > 8, extenda nedåt med
-            // cosinus-falloff. ~2.5% av H = ca 25 pixlar på 1024-höjd.
-            var extend = Math.round(H * 0.025);
-            for (var xCol = 0; xCol < W; xCol++) {
-              // Leta nedifrån och uppåt efter första opaka pixel
-              var yBottom = -1;
-              for (var yy = H - 1; yy >= 0; yy--) {
-                if (altanData.data[(yy * W + xCol) * 4 + 3] > 8) { yBottom = yy; break; }
-              }
-              // Kopiera altan-alfan för denna kolumn (bevara originalopacitet)
-              for (var yy2 = 0; yy2 < H; yy2++) {
-                var idx = (yy2 * W + xCol) * 4;
-                var a = altanData.data[idx + 3];
-                maskData.data[idx]   = 255;
-                maskData.data[idx+1] = 255;
-                maskData.data[idx+2] = 255;
-                maskData.data[idx+3] = a;
-              }
-              // Extend nedanför yBottom
-              if (yBottom >= 0) {
-                for (var dy = 1; dy <= extend && (yBottom + dy) < H; dy++) {
-                  var idx2 = ((yBottom + dy) * W + xCol) * 4;
-                  var t = dy / extend; // 0..1
-                  var falloff = Math.cos(t * Math.PI / 2); // mjuk cosinus
-                  var av = Math.round(255 * falloff * 0.85);
-                  if (av > maskData.data[idx2 + 3]) {
-                    maskData.data[idx2]   = 255;
-                    maskData.data[idx2+1] = 255;
-                    maskData.data[idx2+2] = 255;
-                    maskData.data[idx2+3] = av;
-                  }
-                }
-              }
-            }
-            mcx.putImageData(maskData, 0, 0);
-            // Liten horisontell blur så kolumn-diskontinuiteter inte syns
-            var tmpMask = document.createElement('canvas');
-            tmpMask.width = W; tmpMask.height = H;
-            var tmcx = tmpMask.getContext('2d');
-            tmcx.filter = 'blur(' + Math.round(Math.max(W, H) * 0.003) + 'px)';
-            tmcx.drawImage(maskCanvas, 0, 0);
-            tmcx.filter = 'none';
-            maskCanvas = tmpMask;
-
-            // Relightade altanen, skalad till full res
-            var relLayer = document.createElement('canvas');
-            relLayer.width = W; relLayer.height = H;
-            var rlx = relLayer.getContext('2d');
-            rlx.drawImage(relightImg, 0, 0, W, H);
-            rlx.globalCompositeOperation = 'destination-in';
-            rlx.drawImage(maskCanvas, 0, 0);
-            fx.drawImage(relLayer, 0, 0);
-            finalUrl = final.toDataURL('image/jpeg', 0.95);
+            console.log('[polera] Nano Banana klart på', Date.now() - tPol0, 'ms');
+            finalUrl = polData.url;
           } else {
             console.warn('[polera] inget url-svar, behåller rå komposit');
           }
