@@ -1228,14 +1228,39 @@ var AIVisualisering = (function () {
     scene.add(meshGroup);
 
     // Skuggmottagar-plan vid z=0 — osynligt, men tar emot DirectionalLight-skugga.
-    // Större för att fånga hela skuggprojektionen i låg solvinkel (golden hour).
+    // Färgen tintas från sampled markfärg så skuggan drar åt gräsets ton
+    // istället för neutral svart → mer fotografisk skugga.
     var groundGeom = new THREE.PlaneGeometry(80, 80);
-    var groundMat = new THREE.ShadowMaterial({ opacity: 0.45 });
+    var shadowColor = new THREE.Color(0x0a0e06); // grön-svart default
+    if (transform._ambientTint) {
+      // Mörk version av markens färg — ca 15% luminans
+      var a = transform._ambientTint;
+      shadowColor.setRGB(
+        Math.max(0, a.r * 0.18),
+        Math.max(0, a.g * 0.18),
+        Math.max(0, a.b * 0.15)
+      );
+    }
+    var groundMat = new THREE.ShadowMaterial({ opacity: 0.55, color: shadowColor });
     var ground = new THREE.Mesh(groundGeom, groundMat);
     ground.position.set(b/2, l/2, 0);
     ground.receiveShadow = true;
     ground.frustumCulled = false;
     scene.add(ground);
+
+    // Ground-occluder — osynligt plan 2.5 cm över z=0 som skriver depth
+    // men inte färg. Alltanens underste ~2.5 cm (benens botten) z-cullas
+    // → ser "nedgrävd" ut utan att röra den faktiska geometrin. Löser den
+    // svävande-effekt som fotograferade objekt aldrig har.
+    var occluderGeom = new THREE.PlaneGeometry(80, 80);
+    var occluderMat = new THREE.MeshBasicMaterial({
+      colorWrite: false,
+      depthWrite: true
+    });
+    var occluder = new THREE.Mesh(occluderGeom, occluderMat);
+    occluder.position.set(b/2, l/2, 0.025);
+    occluder.frustumCulled = false;
+    scene.add(occluder);
 
     // Kontakt-skugga: en mörk mjuk ellips direkt under altanen som
     // förankrar den mot marken även vid mycket mjukt diffust ljus där
@@ -1700,11 +1725,11 @@ var AIVisualisering = (function () {
         if (polRes.ok) {
           var polData = await polRes.json();
           if (polData.url) {
-            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms, maskar in altan-region…');
-            // IC-Light-outputen har relightat altan *på sin egen lågupplösning*.
-            // Klistra in den endast där altan-masken är, bevara originaltomtens
-            // pixelskärpa överallt annars. Alfa från Three.js-rendern är
-            // vår exakta silhuettmask med mjuk kant.
+            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms, maskar in altan + kontaktzon…');
+            // IC-Light har relightat hela bilden på lågupplösning. Vi klistrar
+            // in endast altan-regionen + en smal zon under den (kontakt-AO,
+            // färgblödning från gräset) över originaltomten, så bakgrunden
+            // bevaras skarp överallt annars.
             var relightImg = await _loadImg(polData.url);
             var altanImgFull = await _loadImg(altanPng); // RGBA på full res
             var final = document.createElement('canvas');
@@ -1712,16 +1737,38 @@ var AIVisualisering = (function () {
             var fx = final.getContext('2d');
             var tomtImg = await _loadImg(tomtBildDataUrl);
             fx.drawImage(tomtImg, 0, 0, W, H);
-            // Relightade altanen, skalat till full res
+
+            // Bygg utvidgad mask: altan-alfa + nedåt-extension via vertical
+            // shift-blur. Resultat: full opacitet på altanen, mjuk falloff
+            // ~3% av höjden nedåt så IC-Lights kontakt-manipulationer kommer
+            // igenom vid basen utan att läcka ut uppåt eller åt sidorna.
+            var maskCanvas = document.createElement('canvas');
+            maskCanvas.width = W; maskCanvas.height = H;
+            var mcx = maskCanvas.getContext('2d');
+            mcx.drawImage(altanImgFull, 0, 0, W, H);
+            // Vertikal falloff: rita altan-alfan flera gånger med ökande
+            // y-offset och minskande opacitet → dropshadow nedåt, men bara
+            // som alfa-mask (vi använder den till destination-in).
+            var shiftMax = Math.round(H * 0.03);
+            var steps = 6;
+            for (var si = 1; si <= steps; si++) {
+              mcx.globalAlpha = (1 - si / steps) * 0.9;
+              mcx.drawImage(altanImgFull, 0, Math.round(shiftMax * si / steps), W, H);
+            }
+            mcx.globalAlpha = 1;
+            // Mjuka kanten en aning för att undvika stepping
+            mcx.globalCompositeOperation = 'source-over';
+            mcx.filter = 'blur(' + Math.round(Math.max(W, H) * 0.003) + 'px)';
+            mcx.drawImage(maskCanvas, 0, 0);
+            mcx.filter = 'none';
+
+            // Relightade altanen, skalad till full res
             var relLayer = document.createElement('canvas');
             relLayer.width = W; relLayer.height = H;
             var rlx = relLayer.getContext('2d');
             rlx.drawImage(relightImg, 0, 0, W, H);
-            // Använd altan-alfan som mask → destination-in klipper ut
-            // bara altan-området från IC-Light-outputen.
             rlx.globalCompositeOperation = 'destination-in';
-            rlx.drawImage(altanImgFull, 0, 0, W, H);
-            // Lägg den maskade relightade altanen över originaltomten
+            rlx.drawImage(maskCanvas, 0, 0);
             fx.drawImage(relLayer, 0, 0);
             finalUrl = final.toDataURL('image/jpeg', 0.95);
           } else {
