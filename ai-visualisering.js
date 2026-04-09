@@ -1700,8 +1700,30 @@ var AIVisualisering = (function () {
         if (polRes.ok) {
           var polData = await polRes.json();
           if (polData.url) {
-            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms');
-            finalUrl = polData.url;
+            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms, maskar in altan-region…');
+            // IC-Light-outputen har relightat altan *på sin egen lågupplösning*.
+            // Klistra in den endast där altan-masken är, bevara originaltomtens
+            // pixelskärpa överallt annars. Alfa från Three.js-rendern är
+            // vår exakta silhuettmask med mjuk kant.
+            var relightImg = await _loadImg(polData.url);
+            var altanImgFull = await _loadImg(altanPng); // RGBA på full res
+            var final = document.createElement('canvas');
+            final.width = W; final.height = H;
+            var fx = final.getContext('2d');
+            var tomtImg = await _loadImg(tomtBildDataUrl);
+            fx.drawImage(tomtImg, 0, 0, W, H);
+            // Relightade altanen, skalat till full res
+            var relLayer = document.createElement('canvas');
+            relLayer.width = W; relLayer.height = H;
+            var rlx = relLayer.getContext('2d');
+            rlx.drawImage(relightImg, 0, 0, W, H);
+            // Använd altan-alfan som mask → destination-in klipper ut
+            // bara altan-området från IC-Light-outputen.
+            rlx.globalCompositeOperation = 'destination-in';
+            rlx.drawImage(altanImgFull, 0, 0, W, H);
+            // Lägg den maskade relightade altanen över originaltomten
+            fx.drawImage(relLayer, 0, 0);
+            finalUrl = final.toDataURL('image/jpeg', 0.95);
           } else {
             console.warn('[polera] inget url-svar, behåller rå komposit');
           }
