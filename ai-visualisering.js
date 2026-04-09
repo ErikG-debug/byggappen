@@ -1435,7 +1435,11 @@ var AIVisualisering = (function () {
     return dataUrl;
   }
 
-  // Räknar ut axel-inriktat bounding box från en mask-canvas (vita pixlar = innanför).
+  // (borttaget block) — _bboxFranMask, _polerCropOchRefine, _byggPolishMask
+  // användes av clarity-upscaler-pipen. IC-Light hanterar förgrund/bakgrund
+  // internt via subject_image+background_image så inget klient-side crop+mask
+  // behövs längre.
+  /* UNUSED_BLOCK_START
   function _bboxFranMask(maskCanvas) {
     var W = maskCanvas.width, H = maskCanvas.height;
     var d = maskCanvas.getContext('2d').getImageData(0, 0, W, H).data;
@@ -1550,8 +1554,9 @@ var AIVisualisering = (function () {
       md.data[j] = m; md.data[j+1] = m; md.data[j+2] = m; md.data[j+3] = 255;
     }
     cx2.putImageData(md, 0, 0);
-    return c2; // returnera canvasen direkt så _blandaMedMask slipper läsa om
+    return c2;
   }
+  UNUSED_BLOCK_END */
 
   async function _kompositeraOverTomt(tomtDataUrl, altanPngDataUrl, W, H, debugMarker) {
     var loaded = await Promise.all([_loadImg(tomtDataUrl), _loadImg(altanPngDataUrl)]);
@@ -1644,22 +1649,43 @@ var AIVisualisering = (function () {
       var dbgPt = dbgCtx.proj(b/2, l/2, hh/2);
       console.log('[debug] Render3D säger target hamnar vid pixel:', dbgPt, 'av (', W, H, ')');
 
+      // Rå Three.js-komposit som fallback om IC-Light-anropet misslyckas.
       var komposit = await _kompositeraOverTomt(tomtBildDataUrl, altanPng, W, H, null);
 
-      // Bygg en dilaterad mask från altanens alpha-kanal — används efter AI-
-      // polish för att behålla bakgrundens pixlar exakt och bara låta AI:n
-      // påverka altanen + ett smalt område runt den (för kontakt-skuggor/blending).
-      var polishMask = await _byggPolishMask(altanPng, W, H);
-
-      // AI-polish: crop altan-regionen, skicka till clarity-upscaler (render
-      // refiner som bevarar struktur men lägger på foto-textur), klistra
-      // tillbaka i kompositen med polishMask som alpha så bakgrunden bevaras
-      // pixel-exakt.
+      // AI-polish: IC-Light FBC (Foreground-Background-Conditioned). Skicka
+      // altanPng (med alpha — IC-Light läser transparensen som förgrundsmask)
+      // och tomtbilden som bakgrund. Modellen relightar altanen så ljus,
+      // färgtemperatur och kontaktskuggor matchar scenen. Geometrin bevaras
+      // eftersom subject_image-identiteten låses, bakgrunden bevaras eftersom
+      // den ges som explicit input.
       var finalUrl = komposit;
       try {
-        finalUrl = await _polerCropOchRefine(komposit, polishMask, W, H);
+        var tPol0 = Date.now();
+        console.log('[polera] IC-Light: skickar förgrund + bakgrund…');
+        var polRes = await fetch(_config.proxyUrl + '/api/polera', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject_image: altanPng,
+            background_image: tomtBildDataUrl,
+            width: W,
+            height: H
+          })
+        });
+        if (polRes.ok) {
+          var polData = await polRes.json();
+          if (polData.url) {
+            console.log('[polera] IC-Light klart på', Date.now() - tPol0, 'ms');
+            finalUrl = polData.url;
+          } else {
+            console.warn('[polera] inget url-svar, behåller rå komposit');
+          }
+        } else {
+          var errTxt = await polRes.text();
+          console.warn('[polera] HTTP', polRes.status, errTxt, '— behåller rå komposit');
+        }
       } catch (e) {
-        console.warn('[polera] fel, behåller rå komposit:', e.message);
+        console.warn('[polera] fetch-fel, behåller rå komposit:', e.message);
       }
 
       _config.todayCount++;
