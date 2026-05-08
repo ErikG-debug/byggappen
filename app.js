@@ -361,6 +361,9 @@ function oppnaRitvy(forceOpen) {
   var btn = document.getElementById('btn-ritvy');
   if (btn) btn.textContent = ritvyOpen ? '\u{1F4D0} St\u00e4ng detaljritning' : '\u{1F4D0} Anpassa och visa detaljritning';
   if (ritvyOpen) {
+    // Dölj AI-sektionen så designvyn får egen plats
+    var aiSekOR = document.getElementById('pv-ai-sektion');
+    if (aiSekOR) aiSekOR.classList.add('dold');
     byggRitvyKontroller(valtProjekt);
     uppdateraLagerPanel(valtProjekt);
     renderRitvy();
@@ -397,7 +400,7 @@ function visaFokusBanner(lagerNamn) {
   var banner = document.createElement('div');
   banner.id = 'fokus-banner';
   banner.className = 'fokus-banner';
-  banner.innerHTML = '🔍 Fokus: <strong>' + lagerNamn + '</strong> <button onclick="avslutaFokus()">✕ Avsluta fokusläge</button>';
+  banner.innerHTML = 'Fokus: <strong>' + lagerNamn + '</strong> <button onclick="avslutaFokus()">✕ Avsluta fokusläge</button>';
   var sektion = document.getElementById('ritvy-sektion');
   if (sektion) sektion.insertBefore(banner, sektion.firstChild);
 }
@@ -1181,7 +1184,7 @@ function visaProjekt(id) {
   // Fyll hero
   document.getElementById('pv-ikon').textContent        = meta?.ikon ?? p.ikon ?? '';
   document.getElementById('pv-namn').textContent        = p.namn;
-  document.getElementById('pv-beskrivning').textContent = p.sammanfattning ?? meta?.beskrivning ?? '';
+  document.getElementById('pv-beskrivning').textContent = (p.inspiration && p.inspiration.budskap) || p.sammanfattning || meta?.beskrivning || '';
   document.getElementById('pv-badges').innerHTML = '';
 
   // Dölj dimensioner tills upload-steget är klart
@@ -1228,14 +1231,14 @@ function visaProjekt(id) {
   requestAnimationFrame(() => {
     innehall.classList.add('synlig');
   });
-  byttFlik('instruktioner');
+  // Inga sektioner öppna som default
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // WOW-first: gå direkt till upload-sidan med inspirationsaccordion
   byggInspirationsAccordion(id);
   visaUploadSteg();
   document.getElementById('pv-steg-indikator').classList.remove('dold');
-  uppdateraStegIndikator(2);
+  uppdateraStegIndikator(1);
 }
 
 // ============================================================
@@ -1278,9 +1281,11 @@ function visaUploadSteg() {
   // Säkerställ att inget projektinnehåll syns under upload-CTA:n
   document.querySelector('.projekt-hero').classList.add('dold');
   document.querySelector('.flikar').classList.add('dold');
-  document.getElementById('instruktioner').classList.add('dold');
+  document.getElementById('instruktioner-sida').classList.add('dold');
   document.getElementById('inkopslista').classList.add('dold');
   document.getElementById('verktyg').classList.add('dold');
+  var pvActionsEl = document.getElementById('pv-actions');
+  if (pvActionsEl) pvActionsEl.classList.add('dold');
   var banner = document.getElementById('pv-banner-bild');
   if (banner) banner.classList.add('dold');
 
@@ -1303,7 +1308,12 @@ function visaUploadSteg() {
   var rubrikEl = document.getElementById('upload-rubrik');
   if (rubrikEl) rubrikEl.textContent = _rubrikForProjekt(valtProjekt);
   var beskrEl = sek.querySelector('.upload-beskrivning');
-  if (beskrEl) beskrEl.textContent = 'Ladda upp en bild på din tomt — vi placerar projektet rätt åt dig så du kan finjustera det.';
+  var pAkt = projekt[valtProjekt] || {};
+  var projNamn = pAkt.namn || 'projektet';
+  var ettOrd = pAkt.genus === 'ett';
+  var possessiv = ettOrd ? 'ditt' : 'din';
+  var pron = ettOrd ? 'det' : 'den';
+  if (beskrEl) beskrEl.textContent = 'Ladda upp en bild på din tomt och placera "' + projNamn + '" där du vill ha ' + pron + ' — sen tar AI:n över, och plötsligt står ' + possessiv + ' nya ' + projNamn.toLowerCase() + ' där som om ' + pron + ' alltid hade funnits.';
   preview.classList.add('dold');
   dropzone.classList.remove('dold');
   fortsatt.disabled = true;
@@ -1317,7 +1327,7 @@ function avtacknaProjektInnehall() {
   // Visa hero, flikar och instruktioner när man går vidare från upload-steget
   document.querySelector('.projekt-hero').classList.remove('dold');
   document.querySelector('.flikar').classList.remove('dold');
-  byttFlik('instruktioner');
+  // Inga sektioner öppna som default — användaren får välja att expandera
 
   // Visa banner-bild för projektet om inspirationsdata finns
   var bannerEl = document.getElementById('pv-banner-bild');
@@ -1342,7 +1352,7 @@ function hoppaOverUpload() {
   visaDimensioner();
   oppnaRitvy(true);
   visaAnpassaKnapp();
-  uppdateraStegIndikator(3);
+  uppdateraStegIndikator(2);
 }
 
 async function gaVidare() {
@@ -1371,20 +1381,33 @@ async function gaVidare() {
     return Math.max(d.min, Math.min(d.max, v));
   }
 
-  if (analysResultat && dimRegler) {
-    aktuellaB = clamp(analysResultat.b, { min: dimRegler.b.min, max: dimRegler.b.max, def: tryggDefault.b });
-    aktuellaL = clamp(analysResultat.l, { min: dimRegler.l.min, max: dimRegler.l.max, def: tryggDefault.l });
-    aktuellaH = clamp(analysResultat.h, { min: dimRegler.h.min, max: dimRegler.h.max, def: tryggDefault.h });
+  // Bevara befintlig design om användaren redan justerat mått.
+  // Haiku-analysen får bara påverka kameravinkel och ljus, inte dimensioner.
+  var harBefintligDesign = aktuelltDesign && aktuelltDesign.projektTyp === valtProjekt;
+
+  if (!harBefintligDesign) {
+    // Första gången — använd Haiku-mått eller trygga defaults
+    if (analysResultat && dimRegler) {
+      aktuellaB = clamp(analysResultat.b, { min: dimRegler.b.min, max: dimRegler.b.max, def: tryggDefault.b });
+      aktuellaL = clamp(analysResultat.l, { min: dimRegler.l.min, max: dimRegler.l.max, def: tryggDefault.l });
+      aktuellaH = clamp(analysResultat.h, { min: dimRegler.h.min, max: dimRegler.h.max, def: tryggDefault.h });
+    } else {
+      aktuellaB = tryggDefault.b;
+      aktuellaL = tryggDefault.l;
+      aktuellaH = tryggDefault.h;
+    }
+    aktuelltDesign = ByggGenerator.standardDesign(valtProjekt, { b: aktuellaB, l: aktuellaL, h: aktuellaH });
+    synkaDesign();
+  }
+
+  // Kameravinkel och ljus kan alltid uppdateras — de påverkar inte konstruktionen
+  if (analysResultat) {
     if (analysResultat.kameraTransform) {
       aktuellKameraTransform = _mappaHaikuKamera(analysResultat.kameraTransform);
     }
     if (analysResultat.ljus) {
       aktuelltLjus = analysResultat.ljus;
     }
-  } else {
-    aktuellaB = tryggDefault.b;
-    aktuellaL = tryggDefault.l;
-    aktuellaH = tryggDefault.h;
   }
 
   if (loader) loader.classList.add('dold');
@@ -1421,7 +1444,7 @@ async function gaVidare() {
   if (ritvy) ritvy.classList.add('dold');
   var actionsEl = document.getElementById('pv-actions');
   if (actionsEl) actionsEl.classList.add('dold');
-  uppdateraStegIndikator(3);
+  uppdateraStegIndikator(1);
   // Skapa editorn sist så ai-bild-container har sin slutliga bredd
   requestAnimationFrame(function () { visaPerspektivEditor(); });
 }
@@ -1502,9 +1525,11 @@ function startaPerspektivFlow() {
   // Återanvänd befintlig upload-vy men dirigera dess "Fortsätt" till perspektiv-editorn.
   document.querySelector('.projekt-hero').classList.add('dold');
   document.querySelector('.flikar').classList.add('dold');
-  document.getElementById('instruktioner').classList.add('dold');
+  document.getElementById('instruktioner-sida').classList.add('dold');
   document.getElementById('inkopslista').classList.add('dold');
   document.getElementById('verktyg').classList.add('dold');
+  var pvActionsEl = document.getElementById('pv-actions');
+  if (pvActionsEl) pvActionsEl.classList.add('dold');
   var banner = document.getElementById('pv-banner-bild');
   if (banner) banner.classList.add('dold');
 
@@ -1568,6 +1593,8 @@ function visaPerspektivEditor() {
 
   kontroller.innerHTML = '<p class="ai-kostnad-info">' + AIVisualisering._config.todayCount + ' av ' + AIVisualisering._config.maxPerDag + ' genereringar idag</p>';
 
+  var _s0 = aktuelltDesign && aktuelltDesign.sektioner && aktuelltDesign.sektioner[0];
+  console.log('[PE] sek0:', _s0 ? {b:_s0.b, l:_s0.l, h:_s0.egenskaper&&_s0.egenskaper.h} : '-', 'glob:', aktuellaB, aktuellaL, aktuellaH);
   AIVisualisering.renderPerspektivEditor(
     container, uploadedImage, aktuelltDesign, aktuelltBerakning,
     function onGenerate(result) {
@@ -1630,7 +1657,7 @@ function visaAnpassaKonstruktionKnapp() {
   var btn = document.createElement('button');
   btn.id = 'anpassa-konstruktion-knapp';
   btn.className = 'anpassa-konstruktion-knapp';
-  btn.textContent = '✏️ Anpassa konstruktion →';
+  btn.textContent = 'Anpassa konstruktion';
   btn.onclick = gaTillAnpassning;
   container.appendChild(btn);
 }
@@ -1665,14 +1692,25 @@ function visaDimensioner() {
   const dimSek = document.getElementById('pv-dim-sektion');
 
   if (regler) {
-    var std = regler.standard;
-    aktuellaB = std.b;
-    aktuellaL = std.l;
-    aktuellaH = std.h;
+    // Återanvänd befintlig design om den redan finns (användaren kan ha justerat mått)
+    if (!aktuelltDesign || aktuelltDesign.projektTyp !== id) {
+      var std = regler.standard;
+      aktuellaB = std.b;
+      aktuellaL = std.l;
+      aktuellaH = std.h;
+      aktuelltDesign = ByggGenerator.standardDesign(id, { b: aktuellaB, l: aktuellaL, h: aktuellaH });
+    } else {
+      // Synka globala dimensioner från befintlig design
+      var sek0 = aktuelltDesign.sektioner[0];
+      if (sek0) {
+        aktuellaB = sek0.b;
+        aktuellaL = sek0.l;
+        aktuellaH = sek0.egenskaper.h || aktuellaH;
+      }
+    }
 
     byggSliders(id);
 
-    aktuelltDesign = ByggGenerator.standardDesign(id, { b: aktuellaB, l: aktuellaL, h: aktuellaH });
     var dr = ByggRegler.tillampa(aktuelltDesign);
     aktuelltBerakning = dr.berakning;
 
@@ -1787,7 +1825,7 @@ function gaaTillbaka() {
     // Återställ hero och flikar till synliga (för nästa projektbesök)
     document.querySelector('.projekt-hero').classList.remove('dold');
     document.querySelector('.flikar').classList.remove('dold');
-    document.getElementById('instruktioner').classList.remove('dold');
+    document.getElementById('instruktioner-sida').classList.add('dold');
 
     // Visa hero + kortlista
     const heroLanding = document.getElementById('hero-landing');
@@ -1865,6 +1903,7 @@ function renderInstruktioner(p) {
   const procent = Math.round((antalKlara / p.steg.length) * 100);
 
   el.innerHTML = `
+    <button class="tillbaka-till-inkop" onclick="tillbakaTillInkop()">&larr; Tillbaka till inköpslistan</button>
     <h2 class="projekt-rubrik">Bygginstruktioner \u2014 ${p.namn}</h2>
     <div class="info-rad"></div>
 
@@ -1876,7 +1915,7 @@ function renderInstruktioner(p) {
     </div>
 
     ${oppetSteg === -1 ? renderOverblick(p, prog) : renderDetalj(p, prog)}
-    <button class="skriv-ut-knapp" onclick="printaInstruktioner()">📄 Ladda ner instruktionsmanual som PDF</button>
+    <button class="skriv-ut-knapp" onclick="printaInstruktioner()">Ladda ner instruktionsmanual som PDF</button>
   `;
 }
 
@@ -2070,6 +2109,144 @@ function printaInstruktioner() {
   setTimeout(() => document.body.classList.remove('printing-instr'), 500);
 }
 
+function _stangDesignLageOmOppet() {
+  if (!designLageOppet) return;
+  // Implicit spara: slider-ändringar har redan synkat designen via synkaDesign().
+  // Flytta tillbaka 3D-containern till ritvy-canvas (annars sitter den kvar i dolda design-panelen).
+  var canvas = document.querySelector('.ritvy-canvas');
+  var cad3d = document.getElementById('cad-3d-container');
+  if (canvas && cad3d && cad3d.parentElement !== canvas) {
+    canvas.appendChild(cad3d);
+  }
+  designLageOppet = false;
+  var dl = document.getElementById('design-lage');
+  if (dl) dl.classList.add('dold');
+  uppdateraKostnadDisplay();
+}
+
+function gaTillSteg(steg) {
+  if (!valtProjekt) return;
+
+  // Stäng designläget ordentligt om det är öppet (flytta 3D-container tillbaka etc.)
+  _stangDesignLageOmOppet();
+
+  if (steg === 1) {
+    // Skiss: återgå till skissläget utan att förstöra designen
+    document.getElementById('instruktioner-sida').classList.add('dold');
+    document.getElementById('inkopslista').classList.add('dold');
+    document.getElementById('verktyg').classList.add('dold');
+    document.querySelectorAll('.chip-knapp').forEach(function(b) { b.classList.remove('aktiv-chip'); });
+    document.querySelector('.flikar').classList.add('dold');
+    document.querySelector('.projekt-hero').classList.add('dold');
+    var banner1 = document.getElementById('pv-banner-bild');
+    if (banner1) banner1.classList.add('dold');
+    var ritvy1 = document.getElementById('ritvy-sektion');
+    if (ritvy1) ritvy1.classList.add('dold');
+    var actions1 = document.getElementById('pv-actions');
+    if (actions1) actions1.classList.add('dold');
+
+    if (uploadedImage) {
+      // Säkerställ att beräkningen är i sync med senaste dimensionerna
+      if (aktuelltDesign && typeof ByggRegler !== 'undefined') {
+        try {
+          var rSync = ByggRegler.tillampa(aktuelltDesign);
+          if (rSync && rSync.berakning) aktuelltBerakning = rSync.berakning;
+        } catch (e) {}
+      }
+      // Visa AI-sektionen och rita om perspektiv-editorn med senaste dimensionerna
+      var aiSek1 = document.getElementById('pv-ai-sektion');
+      if (aiSek1) aiSek1.classList.remove('dold');
+      visaPerspektivEditor();
+    } else {
+      // Ingen uppladdad bild — visa upload-vyn
+      visaUploadSteg();
+    }
+    uppdateraStegIndikator(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  if (steg === 2) {
+    // Designa: dölj instruktioner + stäng chips, visa flikraden och ritvy
+    document.getElementById('instruktioner-sida').classList.add('dold');
+    document.getElementById('inkopslista').classList.add('dold');
+    document.getElementById('verktyg').classList.add('dold');
+    document.querySelectorAll('.chip-knapp').forEach(function(b) { b.classList.remove('aktiv-chip'); });
+    document.querySelector('.flikar').classList.remove('dold');
+    document.querySelector('.projekt-hero').classList.remove('dold');
+    var aiSek2 = document.getElementById('pv-ai-sektion');
+    if (aiSek2) aiSek2.classList.add('dold');
+    var uploadSek2 = document.getElementById('pv-upload-sektion');
+    if (uploadSek2) uploadSek2.classList.add('dold');
+    var actions2 = document.getElementById('pv-actions');
+    if (actions2) actions2.classList.remove('dold');
+    // Öppna ritvyn om användaren har en design
+    if (aktuelltDesign) {
+      oppnaRitvy(true);
+    }
+    uppdateraStegIndikator(2);
+    var heroEl = document.querySelector('.projekt-hero');
+    if (heroEl) heroEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  if (steg === 3) {
+    // Material: öppna inköpslista-sektionen
+    document.getElementById('instruktioner-sida').classList.add('dold');
+    document.querySelector('.flikar').classList.remove('dold');
+    var inkopChip = document.querySelector('.chip-knapp[onclick*="inkopslista"]');
+    var inkopEl = document.getElementById('inkopslista');
+    if (inkopEl && inkopEl.classList.contains('dold')) {
+      toggleSektion('inkopslista', inkopChip);
+    } else if (inkopEl) {
+      inkopEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    uppdateraStegIndikator(3);
+    return;
+  }
+
+  if (steg === 4) {
+    startaBygge();
+    return;
+  }
+}
+
+function toggleSektion(id, btn) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var oppen = !el.classList.contains('dold');
+  ['inkopslista', 'verktyg'].forEach(function(s) {
+    var e = document.getElementById(s);
+    if (e) e.classList.add('dold');
+  });
+  document.querySelectorAll('.chip-knapp').forEach(function(b) {
+    b.classList.remove('aktiv-chip');
+  });
+  if (!oppen) {
+    el.classList.remove('dold');
+    if (btn) btn.classList.add('aktiv-chip');
+    setTimeout(function() {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+}
+
+function startaBygge() {
+  if (!valtProjekt) return;
+  document.getElementById('projekt-innehall').classList.add('dold');
+  document.getElementById('instruktioner-sida').classList.remove('dold');
+  uppdateraStegIndikator(4);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function tillbakaTillInkop() {
+  document.getElementById('instruktioner-sida').classList.add('dold');
+  document.getElementById('projekt-innehall').classList.remove('dold');
+  uppdateraStegIndikator(3);
+  var el = document.querySelector('.flikar');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function byttFlik(flikNamn) {
   document.querySelectorAll('.flik-innehall').forEach(el => el.classList.add('dold'));
   document.getElementById(flikNamn).classList.remove('dold');
@@ -2081,6 +2258,12 @@ function byttFlik(flikNamn) {
     var uploadSek = document.getElementById('pv-upload-sektion');
     if (uploadSek && uploadSek.classList.contains('dold')) {
       uppdateraStegIndikator(4);
+    }
+  }
+  if (flikNamn === 'inkopslista' && valtProjekt) {
+    var uploadSek2 = document.getElementById('pv-upload-sektion');
+    if (uploadSek2 && uploadSek2.classList.contains('dold')) {
+      uppdateraStegIndikator(3);
     }
   }
 }

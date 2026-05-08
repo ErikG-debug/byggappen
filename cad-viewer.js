@@ -165,14 +165,31 @@
     controls.update();
   }
 
+  var originalMaterials = {};
+
   function setLayerVisible(namn, visible) {
     var mesh = layerMeshes[namn];
-    if (mesh) mesh.visible = visible;
+    if (!mesh) return;
+    // Spara originalmaterial första gången
+    if (!originalMaterials[namn]) {
+      originalMaterials[namn] = mesh.material;
+    }
+    mesh.visible = true;
+    mesh.material = visible ? originalMaterials[namn] : fadedMaterial;
   }
 
   function getLayerNames() {
     return Object.keys(layerMeshes);
   }
+
+  // Halvtransparent material för dolda/filtrerade lager
+  var fadedMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    roughness: 0.9,
+    transparent: true,
+    opacity: 0.15,
+    depthWrite: false,
+  });
 
   // Gråmaterial för "redan byggda" delar
   var ghostMaterial = new THREE.MeshStandardMaterial({

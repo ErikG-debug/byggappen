@@ -907,7 +907,7 @@ function _renderWallSVG(del, ctx, palette, style) {
   if (style === 'teknisk') {
     if (z1 > ctx.h) {
       const [htx, hty] = ctx.proj(b/2, 0, (z0 + z1) * 0.6);
-      svg += `<text x="${htx.toFixed(1)}" y="${hty.toFixed(1)}" text-anchor="middle" font-size="10" fill="#999" font-family="Arial">HUS</text>`;
+      svg += `<text x="${htx.toFixed(1)}" y="${hty.toFixed(1)}" text-anchor="middle" font-size="10" fill="#999" stroke="none" font-family="Arial">HUS</text>`;
     }
   } else {
     for (let bz = Math.ceil(z0 / 0.25) * 0.25; bz < z1; bz += 0.25) {

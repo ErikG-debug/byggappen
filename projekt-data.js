@@ -687,7 +687,8 @@ const svgAltan = [
 const projekt = {
   lekstuga: {
     namn: "Lekstuga",
-    ikon: "🏠",
+    genus: "en",
+    ikon: "",
     beskrivning: "Ca 2×2 m, för barn 3–10 år",
     sammanfattning: "En enkel lekstuga i trä med sadeltak, dörr och fönster. Perfekt som första byggprojekt med barnen. Bygger på regelstomme med utvändiga väggar och enkel grundläggning på betongplintar.",
     nyckelord: ['lekstuga', 'koja', 'lekbod', 'barnhus', 'barns', 'lekplats'],
@@ -940,24 +941,24 @@ const projekt = {
     ],
     verktyg: {
       maste: [
-        "⚡ Skruvdragare (gärna slagskruvdragare)",
-        "🪚 Cirkelsåg eller kap/gersåg",
-        "📏 Måttband, 5 m",
-        "📐 Vattenpass, 60 cm",
-        "🔨 Hammare",
-        "📐 Vinkelhake",
-        "✏️ Blyertspenna för markering",
-        "🥽 Skyddsglasögon",
-        "🧤 Arbetshandskar"
+        "Skruvdragare (gärna slagskruvdragare)",
+        "Cirkelsåg eller kap/gersåg",
+        "Måttband, 5 m",
+        "Vattenpass, 60 cm",
+        "Hammare",
+        "Vinkelhake",
+        "Blyertspenna för markering",
+        "Skyddsglasögon",
+        "Arbetshandskar"
       ],
       bra: [
-        "🔌 Borrmaskin med bits",
-        "🪛 Fogpistol (för fogmassa)",
-        "🖌️ Penslar och roller (för målning)",
-        "📏 Snörslå (för raka linjer)",
-        "⚖️ Lod",
-        "🪜 Stege, 3–4 m",
-        "🔧 Skiftnyckel"
+        "Borrmaskin med bits",
+        "Fogpistol (för fogmassa)",
+        "Penslar och roller (för målning)",
+        "Snörslå (för raka linjer)",
+        "Lod",
+        "Stege, 3–4 m",
+        "Skiftnyckel"
       ]
     },
     inspiration: {
@@ -975,7 +976,8 @@ const projekt = {
 
   altan: {
     namn: "Altan",
-    ikon: "🪵",
+    genus: "en",
+    ikon: "",
     beskrivning: "Ca 4×3 m, fristående eller mot hus",
     sammanfattning: "En klassisk trallad altan på stolpfundament — stabil, snygg och enkel att bygga själv. Fungerar både fristående och mot husvägg, och kan anpassas i storlek, höjd och räcke efter din tomt.",
     nyckelord: ['altan', 'terrass', 'uteplats', 'trall', 'trädäck', 'däck', 'utomhus', 'veranda'],
@@ -1096,24 +1098,24 @@ const projekt = {
     ],
     verktyg: {
       maste: [
-        "⚡ Slagskruvdragare",
-        "🪚 Cirkelsåg",
-        "📏 Måttband, 8 m",
-        "📐 Vattenpass, 100 cm",
-        "🔨 Hammare",
-        "🔌 Borrmaskin (för bulthål)",
-        "📐 Vinkelhake",
-        "🥽 Skyddsglasögon",
-        "🧤 Arbetshandskar"
+        "Slagskruvdragare",
+        "Cirkelsåg",
+        "Måttband, 8 m",
+        "Vattenpass, 100 cm",
+        "Hammare",
+        "Borrmaskin (för bulthål)",
+        "Vinkelhake",
+        "Skyddsglasögon",
+        "Arbetshandskar"
       ],
       bra: [
-        "🪚 Kap/gersåg (för exakta vinklar)",
-        "🪛 Fogpistol",
-        "📏 Snörslå",
-        "⚖️ Lod",
-        "🪜 Stege",
-        "🔧 Skiftnyckel och ringnyckel M12",
-        "⛏️ Spade (för grundhål)"
+        "Kap/gersåg (för exakta vinklar)",
+        "Fogpistol",
+        "Snörslå",
+        "Lod",
+        "Stege",
+        "Skiftnyckel och ringnyckel M12",
+        "Spade (för grundhål)"
       ]
     },
     inspiration: {
@@ -1132,6 +1134,7 @@ const projekt = {
 
   pergola: {
     namn: "Pergola",
+    genus: "en",
     ikon: "\u{1F33F}",
     beskrivning: "Öppet lusthus med spjältak",
     sammanfattning: "En fristående pergola i trä med stolpar, bärbalkar och spjältak. Ger behaglig halvskugga och kan kläs med klätterväxter. Enkel konstruktion som passar de flesta trädgårdar.",

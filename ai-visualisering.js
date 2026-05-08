@@ -15,6 +15,17 @@ var AIVisualisering = (function () {
 
   // ---- Hjälpfunktioner ------------------------------------------------------
 
+  // Central hjälpare: hämta b, l, h från design.sektioner[0] (den enda pålitliga källan).
+  // berakning.b / design.b existerar INTE — dessa faller igenom till hardcoded defaults.
+  function _hamtaBLH(design, berakning) {
+    var sek0 = (design && design.sektioner && design.sektioner[0]) || null;
+    return {
+      b: (sek0 && sek0.b) || 3,
+      l: (sek0 && sek0.l) || 3,
+      h: (sek0 && sek0.egenskaper && sek0.egenskaper.h) || 2.2
+    };
+  }
+
   function _resizeFit(dataUrl, maxDim) {
     return new Promise(function (resolve) {
       var img = new Image();
@@ -480,9 +491,9 @@ var AIVisualisering = (function () {
       return '';
     }
     var delar = ByggGenerator.delar(design, berakning);
-    var b = berakning.b || design.b || 3;
-    var l = berakning.l || design.l || 3;
-    var h = berakning.h || design.h || 2.2;
+    var dim = _hamtaBLH(design, berakning);
+    var b = dim.b, l = dim.l, h = dim.h;
+    console.log('[WIREFRAME] dim:', dim, 'delar:', delar.length);
     var ctx = Render3D.skapaKontext(
       b, l, h,
       transform.rotAz, transform.rotEl,
@@ -604,9 +615,8 @@ var AIVisualisering = (function () {
     });
     var W = natural.w, H = natural.h;
 
-    var b = berakning.b || design.b || 3;
-    var l = berakning.l || design.l || 3;
-    var h = berakning.h || design.h || 2.2;
+    var dim = _hamtaBLH(design, berakning);
+    var b = dim.b, l = dim.l, h = dim.h;
 
     // Skala om transformens offset från display-pixel till natural-pixel
     // (offset registrerades på display-canvas, måste skalas till bildens upplösning)
@@ -892,22 +902,11 @@ var AIVisualisering = (function () {
     if (options && options.maskSkalad) {
       var varning = document.createElement('p');
       varning.className = 'ai-mask-varning';
-      varning.textContent = '⚠️ Masken skalades automatiskt efter dina nya mått — rita om om resultatet ser fel ut.';
+      varning.textContent = 'Masken skalades automatiskt efter dina nya mått — rita om om resultatet ser fel ut.';
       container.appendChild(varning);
     }
 
-    var knappar = document.createElement('div');
-    knappar.className = 'ai-kontroller-knappar';
-
-    var btnRegenerate = document.createElement('button');
-    btnRegenerate.className = 'ai-knapp ai-knapp-primar';
-    btnRegenerate.textContent = 'Generera igen';
-    btnRegenerate.onclick = function() { if (typeof startaAIGenerering === 'function') startaAIGenerering(); };
-
-    knappar.appendChild(btnRegenerate);
-
     container.appendChild(img);
-    container.appendChild(knappar);
   }
 
   function renderFel(container, msg) {
@@ -1149,9 +1148,8 @@ var AIVisualisering = (function () {
   }
 
   function _bygg3DScenen(design, berakning, transform, ljus, W, H) {
-    var b = berakning.b || design.b || 3;
-    var l = berakning.l || design.l || 3;
-    var h = berakning.h || design.h || 2.2;
+    var dim = _hamtaBLH(design, berakning);
+    var b = dim.b, l = dim.l, h = dim.h;
 
     var displayScale = transform._displayScale || 1;
     var rotAz = transform.rotAz, rotEl = transform.rotEl;
@@ -1628,7 +1626,7 @@ var AIVisualisering = (function () {
         rotAz: transform.rotAz, rotEl: transform.rotEl,
         zoom: transform.zoom, offsetX: transform.offsetX, offsetY: transform.offsetY,
         _displayScale: transform._displayScale,
-        b: berakning.b, l: berakning.l, h: berakning.h
+        b: _hamtaBLH(design, berakning).b, l: _hamtaBLH(design, berakning).l, h: _hamtaBLH(design, berakning).h
       }));
 
       // DEBUG: bygg samma scen utanför render för att kunna projicera testpunkter
@@ -1636,9 +1634,8 @@ var AIVisualisering = (function () {
       dbgBuilt.scene.updateMatrixWorld(true);
       dbgBuilt.camera.updateMatrixWorld(true);
       dbgBuilt.camera.matrixWorldInverse.copy(dbgBuilt.camera.matrixWorld).invert();
-      var dbgB = berakning.b || design.b || 3;
-      var dbgL = berakning.l || design.l || 3;
-      var dbgH = berakning.h || design.h || 2.2;
+      var dbgDim = _hamtaBLH(design, berakning);
+      var dbgB = dbgDim.b, dbgL = dbgDim.l, dbgH = dbgDim.h;
       var dbgPts = [
         ['center', dbgB/2, dbgL/2, dbgH/2],
         ['east+1', dbgB/2 + 1, dbgL/2, dbgH/2],
@@ -1664,9 +1661,8 @@ var AIVisualisering = (function () {
 
       // DEBUG: rita en röd kross där Render3D säger altan-centrum ska vara,
       // för att verifiera om Three.js-mappingen matchar.
-      var b = berakning.b || design.b || 3;
-      var l = berakning.l || design.l || 3;
-      var hh = berakning.h || design.h || 2.2;
+      var genDim = _hamtaBLH(design, berakning);
+      var b = genDim.b, l = genDim.l, hh = genDim.h;
       var ds = transform._displayScale || 1;
       var dbgCtx = Render3D.skapaKontext(b, l, hh,
         transform.rotAz, transform.rotEl, transform.zoom * ds,
@@ -1705,7 +1701,19 @@ var AIVisualisering = (function () {
         var polRes = await fetch(_config.proxyUrl + '/api/polera', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: kompositLiten })
+          body: JSON.stringify({
+            image: kompositLiten,
+            prompt: 'Retouch ONLY the wooden deck structure in this image to look photorealistic. ' +
+              'CRITICAL: Do NOT change the deck\'s shape, size, proportions, or position — ' +
+              'the deck is exactly ' + b + 'm wide and ' + l + 'm long (aspect ratio ' +
+              (b < l ? '1:' + (l/b).toFixed(1) : (b/l).toFixed(1) + ':1') + '). ' +
+              'Preserve the exact silhouette, aspect ratio, and perspective of the 3D-rendered deck. ' +
+              'The deck is made of pressure-treated pine with a cool light gray-brown tone, ' +
+              'clean and freshly installed, modern Scandinavian style, ' +
+              'matte finish, visible natural wood grain, and subtle plank-to-plank tonal variation. ' +
+              'Add natural sunlight and soft contact shadows where the deck meets the ground. ' +
+              'Leave everything else in the image completely untouched.'
+          })
         });
         if (polRes.ok) {
           var polData = await polRes.json();

@@ -6,7 +6,7 @@
   <title>Byggappen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,8 +15,8 @@
   <section id="hero-landing" class="hero-landing">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <h1 class="hero-titel">Byggappen</h1>
-      <p class="hero-tagline">Från idé till verklighet — ditt nästa byggprojekt börjar här</p>
+      <h1 class="hero-titel">Bygg själv.</h1>
+      <p class="hero-tagline">Vi planerar, ritar och instruerar steg för steg.</p>
     </div>
   </section>
 
@@ -25,14 +25,39 @@
       <div class="header-text" onclick="gaaTillbaka()" style="cursor:pointer">
         <h1>Byggappen</h1>
       </div>
+      <nav class="header-nav">
+        <a href="#projekt-lista" class="nav-lank" onclick="gaaTillbaka()">Projekt</a>
+      </nav>
+      <div class="header-hoger">
+        <button class="logga-in-knapp">Logga in</button>
+      </div>
     </div>
   </header>
 
   <!-- ── Landningsberättelse (full bredd, story-stil) ── -->
-  <section class="story-sektion story-pitch">
-    <div class="sektion-inner">
-      <h2 class="story-rubrik-stor" data-reveal>Bygg själv.<br><span>Vi planerar, ritar och instruerar steg för steg.</span></h2>
-      <p class="story-underrubrik" data-reveal>Det har aldrig varit enklare att göra det själv.</p>
+  <section class="story-sektion story-showcase">
+    <div class="showcase-inner">
+      <h2 class="showcase-rubrik" data-reveal>Se hur det fungerar</h2>
+      <div class="showcase-grid">
+        <div class="showcase-kort" data-reveal>
+          <div class="showcase-bild" id="showcase-bild-1">
+            <span class="showcase-placeholder">Välj projekt</span>
+          </div>
+          <p class="showcase-text">Bläddra bland färdiga byggprojekt</p>
+        </div>
+        <div class="showcase-kort" data-reveal>
+          <div class="showcase-bild" id="showcase-bild-2">
+            <span class="showcase-placeholder">Designa i 3D</span>
+          </div>
+          <p class="showcase-text">Anpassa mått och material i realtid</p>
+        </div>
+        <div class="showcase-kort" data-reveal>
+          <div class="showcase-bild" id="showcase-bild-3">
+            <span class="showcase-placeholder">AI-visualisering</span>
+          </div>
+          <p class="showcase-text">Se hur det ser ut hemma hos dig</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -59,7 +84,7 @@
               <h4>Välj ett projekt</h4>
               <p>Bläddra bland färdiga byggprojekt och hitta något som passar din trädgård.</p>
             </div>
-            <div class="hur-bild" data-steg="1">📷</div>
+            <div class="hur-bild" data-steg="1"></div>
           </div>
           <div class="hur-steg" data-index="1">
             <div class="hur-nummer">02</div>
@@ -67,7 +92,7 @@
               <h4>Anpassa &amp; visualisera</h4>
               <p>Justera mått, se 3D-modellen från alla vinklar — och få bilder på hur det skulle se ut hemma hos dig.</p>
             </div>
-            <div class="hur-bild" data-steg="2">✏️</div>
+            <div class="hur-bild" data-steg="2"></div>
           </div>
           <div class="hur-steg" data-index="2">
             <div class="hur-nummer">03</div>
@@ -75,7 +100,7 @@
               <h4>Bygg med ritningar</h4>
               <p>Färgkodade detaljritningar, komplett inköpslista och steg-för-steg-instruktioner. Ladda ner allt som PDF — en för inköpslistan och en för instruktionsmanualen — och ta med ut på bygget.</p>
             </div>
-            <div class="hur-bild" data-steg="3">🔨</div>
+            <div class="hur-bild" data-steg="3"></div>
           </div>
         </div>
       </div>
@@ -89,7 +114,7 @@
       <div class="kort-sok-header">
         <h2 class="sektion-rubrik">Utforska projekt</h2>
         <div class="sok-kort-wrapper">
-          <span class="sok-ikon">🔍</span>
+          <span class="sok-ikon"></span>
           <input
             type="text"
             id="sok-input-kort"
@@ -112,19 +137,19 @@
 
       <!-- Stegindikator (alltid över ev. bild för konsistent layout) -->
       <div id="pv-steg-indikator" class="steg-indikator dold">
-        <div class="steg-indikator-item aktivt-steg" data-steg="1">
-          <span class="steg-nummer">1</span><span class="steg-etikett">Välj</span>
+        <div class="steg-indikator-item aktivt-steg" data-steg="1" onclick="gaTillSteg(1)">
+          <span class="steg-nummer">1</span><span class="steg-etikett">Skiss</span>
         </div>
         <div class="steg-indikator-linje"></div>
-        <div class="steg-indikator-item" data-steg="2">
-          <span class="steg-nummer">2</span><span class="steg-etikett">Anpassa</span>
+        <div class="steg-indikator-item" data-steg="2" onclick="gaTillSteg(2)">
+          <span class="steg-nummer">2</span><span class="steg-etikett">Designa</span>
         </div>
         <div class="steg-indikator-linje"></div>
-        <div class="steg-indikator-item" data-steg="3">
+        <div class="steg-indikator-item" data-steg="3" onclick="gaTillSteg(3)">
           <span class="steg-nummer">3</span><span class="steg-etikett">Material</span>
         </div>
         <div class="steg-indikator-linje"></div>
-        <div class="steg-indikator-item" data-steg="4">
+        <div class="steg-indikator-item" data-steg="4" onclick="gaTillSteg(4)">
           <span class="steg-nummer">4</span><span class="steg-etikett">Bygg</span>
         </div>
       </div>
@@ -150,22 +175,14 @@
         </div>
       </div>
 
-      <!-- Mikro-header för upload-steget — minimal projektidentitet -->
-      <div id="upload-mikro-header" class="upload-mikro-header dold">
-        <span class="umh-ikon" id="umh-ikon"></span>
-        <h2 class="umh-namn" id="umh-namn"></h2>
-        <p class="umh-tagline" id="umh-tagline"></p>
-        <p class="umh-instruktion">Ladda upp ett foto på din tomt så skapar AI:n en första skiss av hur projektet kan se ut hemma hos dig.</p>
-      </div>
-
       <!-- Bilduppladdning (steg 2) -->
       <div id="pv-upload-sektion" class="upload-sektion dold">
         <div class="upload-innehall">
-          <h2 id="upload-rubrik" class="dold">Få en första skiss av ditt projekt</h2>
-          <p class="upload-beskrivning dold">Ladda upp en bild på din tomt — vi placerar projektet rätt åt dig så du kan finjustera det.</p>
+          <h2 id="upload-rubrik">Få en första skiss av ditt projekt</h2>
+          <p class="upload-beskrivning">Ladda upp en bild på din tomt och placera projektet där du vill ha det — sen tar AI:n över, och plötsligt står det där som om det alltid hade funnits.</p>
 
           <div class="upload-yta" id="upload-dropzone">
-            <div class="upload-ikon">📷</div>
+            <div class="upload-ikon"></div>
             <p class="upload-ledtext">Dra och släpp en bild här</p>
             <p class="upload-eller">eller</p>
             <label class="upload-knapp" for="upload-input">Välj bild</label>
@@ -179,7 +196,7 @@
           </div>
 
           <div class="upload-knappar">
-            <button class="upload-fortsatt" id="upload-fortsatt" onclick="gaVidare()" disabled>Skapa första skiss →</button>
+            <button class="upload-fortsatt" id="upload-fortsatt" onclick="gaVidare()" disabled>Skapa första skiss</button>
             <button class="upload-hoppa" onclick="hoppaOverUpload()">Jag har ingen bild — fortsätt direkt till design</button>
           </div>
 
@@ -199,10 +216,13 @@
       <!-- Knapprad: Anpassa design + Visualisera hemma -->
       <div id="pv-actions" class="pv-actions dold">
         <button id="btn-anpassa-design" class="btn-anpassa" onclick="oppnaDesignLage()">
-          ✏️ Anpassa design
+          Anpassa design
         </button>
         <button id="btn-cta-visualisera" class="btn-cta-visualisera" onclick="startaPerspektivFlow()">
-          📷 Visualisera hemma hos mig
+          Visualisera hemma hos mig
+        </button>
+        <button id="btn-starta-bygge" class="btn-cta-visualisera" onclick="startaBygge()">
+          Starta bygget
         </button>
       </div>
 
@@ -241,28 +261,39 @@
             <button class="stil-knapp" id="stil-cad-sida"  onclick="bytRitvyStyle('cad-sida')">Från sidan</button>
           </div>
           <button class="aterst-knapp" onclick="aterStallVy()" title="Återställ kameravinkel">↺ Återställ</button>
-          <button class="aterst-knapp" onclick="oppnaRitvy()" title="Stäng ritning">✕ Stäng</button>
         </div>
-        <div class="lager-panel" id="lager-panel"></div>
-        <div class="ritvy-canvas">
-          <div id="cad-3d-container" class="dold" style="width:100%;height:500px;background:#f8f6f2;border-radius:8px;"></div>
-          <div id="cad-svg-container" class="dold" style="width:100%;background:#fff;border-radius:8px;min-height:420px;display:flex;align-items:center;justify-content:center;"></div>
+        <div class="ritvy-body">
+          <div class="ritvy-canvas">
+            <div id="cad-3d-container" class="dold" style="width:100%;height:500px;background:#f8f6f2;border-radius:8px;"></div>
+            <div id="cad-svg-container" class="dold" style="width:100%;background:#fff;border-radius:8px;min-height:420px;display:flex;align-items:center;justify-content:center;"></div>
+          </div>
+          <div class="lager-panel" id="lager-panel"></div>
         </div>
         <div id="ritvy-kontroller" class="ritvy-kontroller"></div>
       </div>
 
       <!-- Flikar -->
-      <div class="flikar">
-        <button class="flik aktiv-flik" onclick="byttFlik('instruktioner')">Instruktioner</button>
-        <button class="flik" onclick="byttFlik('inkopslista')">Inköpslista</button>
-        <button class="flik" onclick="byttFlik('verktyg')">Verktyg</button>
+      <div class="flikar projekt-avslut">
+        <div class="projekt-avslut-chips">
+          <button class="chip-knapp" onclick="toggleSektion('inkopslista', this)">
+            Inköpslista
+            <span class="chip-pil">▾</span>
+          </button>
+          <button class="chip-knapp" onclick="toggleSektion('verktyg', this)">
+            Verktyg
+            <span class="chip-pil">▾</span>
+          </button>
+        </div>
       </div>
-      <div id="instruktioner" class="flik-innehall"></div>
       <div id="inkopslista" class="flik-innehall dold"></div>
       <div id="verktyg" class="flik-innehall dold"></div>
 
     </section>
   </main>
+
+  <section id="instruktioner-sida" class="instruktioner-sida dold">
+    <div id="instruktioner" class="instruktioner-innehall"></div>
+  </section>
 
   <footer class="sid-footer">
     <div class="sid-footer-inner">
